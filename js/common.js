@@ -9,6 +9,8 @@ function renderNav(active) {
       <a href="merge.html"${active==='merge'?' style="color:var(--teal);font-weight:700"':''}>Merge</a>
       <a href="split.html"${active==='split'?' style="color:var(--teal);font-weight:700"':''}>Split</a>
       <a href="image-to-pdf.html"${active==='image-to-pdf'?' style="color:var(--teal);font-weight:700"':''}>Image to PDF</a>
+      <a href="pdf-to-image.html"${active==='pdf-to-image'?' style="color:var(--teal);font-weight:700"':''}>PDF to Image</a>
+      <a href="compress.html"${active==='compress'?' style="color:var(--teal);font-weight:700"':''}>Compress</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
@@ -21,7 +23,7 @@ function renderFooter() {
   f.innerHTML = `🔒 Your files never leave your device &nbsp;·&nbsp;
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://dannycranmer.github.io/devtoolbox/" target="_blank" rel="noopener">Try DevToolbox</a> &nbsp;·&nbsp;
-    Need image tools? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Image Tools (ImageToolkit)</a>
+    Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a>
     <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source</span>`;
   document.body.appendChild(f);
 }

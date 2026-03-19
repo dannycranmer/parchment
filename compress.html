@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Compress PDF Online Free — Parchment</title>
+  <meta name="description" content="Compress PDF files to reduce file size for free. No upload required — your files stay on your device. 100% private.">
+  <meta property="og:title" content="Compress PDF Online Free — Parchment">
+  <meta property="og:description" content="Reduce PDF file size without uploading your files. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/compress.html">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="tool-header">
+    <h1>📦 Compress PDF</h1>
+    <p>Reduce PDF file size — completely free, completely private</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="options">
+        <h3>Compression Level</h3>
+        <div class="option-row">
+          <label for="compLevel">Mode:</label>
+          <select id="compLevel">
+            <option value="light">Light — Re-optimize structure (lossless)</option>
+            <option value="medium" selected>Medium — Downsample images to 150 DPI</option>
+            <option value="heavy">Heavy — Downsample images to 96 DPI</option>
+          </select>
+        </div>
+        <div class="option-row" style="font-size:.85rem;color:var(--text-muted)">
+          Light mode re-serializes the PDF to remove unused objects. Medium and heavy modes also re-render pages with compressed images for maximum size reduction.
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="compressBtn">Compress PDF</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+
+      <div id="resultPanel" style="display:none">
+        <div class="file-list" style="margin-top:1rem">
+          <div class="file-item" id="resultInfo"></div>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" id="downloadBtn">Download Compressed PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('compress'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfData = null, pageCount = 0, resultBlob = null;
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const resultPanel = document.getElementById('resultPanel');
+    const resultInfo = document.getElementById('resultInfo');
+    const compressBtn = document.getElementById('compressBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+
+    let originalName = 'document.pdf', originalSize = 0;
+
+    function reset() {
+      pdfData = null; pageCount = 0; resultBlob = null;
+      pdfInfo.style.display = 'none';
+      resultPanel.style.display = 'none';
+      dropZone.style.display = '';
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        originalName = file.name;
+        originalSize = file.size;
+
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        pageCount = doc.getPageCount();
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        resultPanel.style.display = 'none';
+        resultBlob = null;
+        setStatus(status, '');
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    compressBtn.addEventListener('click', async () => {
+      compressBtn.disabled = true;
+      resultPanel.style.display = 'none';
+      const level = document.getElementById('compLevel').value;
+
+      setStatus(status, 'Compressing…');
+      setProgress(progress, 5);
+
+      try {
+        let compressedBytes;
+
+        if (level === 'light') {
+          // Light: re-serialize with pdf-lib (strips unused objects, normalizes structure)
+          const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+          setProgress(progress, 50);
+          compressedBytes = await doc.save();
+        } else {
+          // Medium/Heavy: render pages as JPEG images and rebuild PDF
+          const dpi = level === 'medium' ? 150 : 96;
+          const scale = dpi / 72;
+          const jpegQuality = level === 'medium' ? 0.75 : 0.55;
+
+          const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+          const newDoc = await PDFLib.PDFDocument.create();
+
+          for (let i = 1; i <= pageCount; i++) {
+            const page = await pdf.getPage(i);
+            const origVp = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width; canvas.height = vp.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+            const jpegBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', jpegQuality));
+            const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+            const img = await newDoc.embedJpg(jpegBytes);
+
+            // Keep original page dimensions (in points)
+            const newPage = newDoc.addPage([origVp.width, origVp.height]);
+            newPage.drawImage(img, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+
+            setProgress(progress, 5 + (85 * i / pageCount));
+          }
+
+          compressedBytes = await newDoc.save();
+        }
+
+        resultBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+        const newSize = compressedBytes.length;
+        const reduction = ((1 - newSize / originalSize) * 100).toFixed(1);
+        const icon = newSize < originalSize ? '✅' : '⚠️';
+        const msg = newSize < originalSize
+          ? `Reduced by ${reduction}%`
+          : 'File is already well-optimized — compressed version is similar size';
+
+        resultInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${icon} ${formatSize(originalSize)} → ${formatSize(newSize)}</div>
+          <div class="file-meta">${msg}</div>
+        </div>`;
+
+        resultPanel.style.display = '';
+        setProgress(progress, 100);
+        setStatus(status, `Compression complete — ${formatSize(originalSize)} → ${formatSize(newSize)}`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      compressBtn.disabled = false;
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (resultBlob) {
+        const name = originalName.replace(/\.pdf$/i, '') + '-compressed.pdf';
+        downloadBlob(resultBlob, name);
+      }
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

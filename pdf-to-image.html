@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Convert PDF to Image Online Free — Parchment</title>
+  <meta name="description" content="Convert PDF pages to high-quality PNG or JPEG images for free. No upload required — your files stay on your device.">
+  <meta property="og:title" content="Convert PDF to Image Online Free — Parchment">
+  <meta property="og:description" content="Convert PDF pages to PNG or JPEG images without uploading your files. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/pdf-to-image.html">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="tool-header">
+    <h1>📷 PDF to Image</h1>
+    <p>Convert PDF pages to high-quality PNG or JPEG images</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="options">
+        <h3>Output Options</h3>
+        <div class="option-row">
+          <label for="imgFormat">Format:</label>
+          <select id="imgFormat">
+            <option value="png">PNG (lossless, larger)</option>
+            <option value="jpeg">JPEG (smaller, adjustable quality)</option>
+          </select>
+        </div>
+        <div class="option-row" id="qualityRow">
+          <label for="imgQuality">Quality:</label>
+          <select id="imgQuality">
+            <option value="1.0">Maximum (100%)</option>
+            <option value="0.92" selected>High (92%)</option>
+            <option value="0.8">Medium (80%)</option>
+            <option value="0.6">Low (60%)</option>
+          </select>
+        </div>
+        <div class="option-row">
+          <label for="imgScale">Resolution:</label>
+          <select id="imgScale">
+            <option value="1">1× (72 DPI — fast)</option>
+            <option value="2" selected>2× (144 DPI — recommended)</option>
+            <option value="3">3× (216 DPI — high quality)</option>
+          </select>
+        </div>
+        <div class="option-row">
+          <label for="pageSelect">Pages:</label>
+          <input type="text" id="pageSelect" placeholder="e.g. 1,3,5-8 or leave blank for all">
+        </div>
+      </div>
+
+      <div class="page-preview" id="pagePreview"></div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="convertBtn">Convert to Images</button>
+        <button class="btn btn-secondary" id="downloadAllBtn" style="display:none">Download All as ZIP</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+
+    <div class="image-grid" id="resultGrid"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('pdf-to-image'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfData = null, pageCount = 0;
+    const convertedImages = []; // { blob, name }
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const pagePreview = document.getElementById('pagePreview');
+    const resultGrid = document.getElementById('resultGrid');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+    const imgFormat = document.getElementById('imgFormat');
+    const qualityRow = document.getElementById('qualityRow');
+
+    imgFormat.addEventListener('change', () => {
+      qualityRow.style.display = imgFormat.value === 'jpeg' ? '' : 'none';
+    });
+
+    function reset() {
+      pdfData = null; pageCount = 0; convertedImages.length = 0;
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      pagePreview.innerHTML = '';
+      resultGrid.innerHTML = '';
+      downloadAllBtn.style.display = 'none';
+      document.getElementById('pageSelect').value = '';
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+        pageCount = pdf.numPages;
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        resultGrid.innerHTML = '';
+        downloadAllBtn.style.display = 'none';
+        convertedImages.length = 0;
+        setStatus(status, '');
+
+        // Render small thumbnails
+        renderThumbnails(pdf, Math.min(pageCount, 50));
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    async function renderThumbnails(pdf, max) {
+      pagePreview.innerHTML = '';
+      try {
+        for (let i = 1; i <= max; i++) {
+          const page = await pdf.getPage(i);
+          const vp = page.getViewport({ scale: 0.3 });
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width; canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+          const thumb = document.createElement('div');
+          thumb.className = 'page-thumb';
+          thumb.appendChild(canvas);
+          const span = document.createElement('span');
+          span.textContent = 'Page ' + i;
+          thumb.appendChild(span);
+          pagePreview.appendChild(thumb);
+        }
+        if (pageCount > max) {
+          const note = document.createElement('div');
+          note.style.cssText = 'grid-column:1/-1;text-align:center;font-size:.85rem;color:var(--text-muted);padding:.5rem';
+          note.textContent = `Showing first ${max} of ${pageCount} pages.`;
+          pagePreview.appendChild(note);
+        }
+      } catch (e) { /* thumbnails not critical */ }
+    }
+
+    function parseRanges(str, max) {
+      if (!str.trim()) return Array.from({ length: max }, (_, i) => i + 1);
+      const pages = new Set();
+      for (const part of str.split(',')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const m = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (m) {
+          const a = parseInt(m[1]), b = parseInt(m[2]);
+          for (let i = Math.max(1, Math.min(a, b)); i <= Math.min(max, Math.max(a, b)); i++) pages.add(i);
+        } else {
+          const n = parseInt(trimmed);
+          if (n >= 1 && n <= max) pages.add(n);
+        }
+      }
+      return Array.from(pages).sort((a, b) => a - b);
+    }
+
+    convertBtn.addEventListener('click', async () => {
+      const pages = parseRanges(document.getElementById('pageSelect').value, pageCount);
+      if (!pages.length) { setStatus(status, 'No pages selected', 'error'); return; }
+
+      convertBtn.disabled = true;
+      convertedImages.length = 0;
+      resultGrid.innerHTML = '';
+      downloadAllBtn.style.display = 'none';
+
+      const format = imgFormat.value;
+      const quality = parseFloat(document.getElementById('imgQuality').value);
+      const scale = parseFloat(document.getElementById('imgScale').value);
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const ext = format === 'jpeg' ? '.jpg' : '.png';
+
+      setStatus(status, `Converting ${pages.length} page${pages.length !== 1 ? 's' : ''}…`);
+      setProgress(progress, 5);
+
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+
+        for (let idx = 0; idx < pages.length; idx++) {
+          const pageNum = pages[idx];
+          const page = await pdf.getPage(pageNum);
+          const vp = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width; canvas.height = vp.height;
+          const ctx = canvas.getContext('2d');
+
+          // White background for JPEG (transparent PNG otherwise)
+          if (format === 'jpeg') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+          const blob = await new Promise(r => canvas.toBlob(r, mimeType, format === 'jpeg' ? quality : undefined));
+          const name = `page-${pageNum}${ext}`;
+          convertedImages.push({ blob, name });
+
+          // Show in result grid
+          const div = document.createElement('div');
+          div.className = 'image-thumb';
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = name;
+          div.appendChild(img);
+
+          const dlBtn = document.createElement('button');
+          dlBtn.className = 'remove';
+          dlBtn.textContent = '⬇';
+          dlBtn.title = 'Download ' + name;
+          dlBtn.style.cssText = 'background:var(--teal);';
+          dlBtn.addEventListener('click', () => downloadBlob(blob, name));
+          div.appendChild(dlBtn);
+
+          const label = document.createElement('div');
+          label.className = 'order';
+          label.textContent = pageNum;
+          div.appendChild(label);
+
+          resultGrid.appendChild(div);
+          setProgress(progress, 5 + (90 * (idx + 1) / pages.length));
+        }
+
+        setProgress(progress, 100);
+        setStatus(status, `Converted ${pages.length} page${pages.length !== 1 ? 's' : ''} to ${format.toUpperCase()}`, 'success');
+
+        if (convertedImages.length > 1) {
+          downloadAllBtn.style.display = '';
+        }
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      convertBtn.disabled = false;
+    });
+
+    downloadAllBtn.addEventListener('click', async () => {
+      downloadAllBtn.disabled = true;
+      setStatus(status, 'Creating ZIP…');
+      setProgress(progress, 20);
+      try {
+        const zip = new JSZip();
+        for (const img of convertedImages) {
+          zip.file(img.name, img.blob);
+        }
+        const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+          setProgress(progress, 20 + (meta.percent * 0.7));
+        });
+        downloadBlob(zipBlob, 'pdf-images.zip');
+        setProgress(progress, 100);
+        setStatus(status, `Downloaded ZIP with ${convertedImages.length} images`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error creating ZIP: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      downloadAllBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
