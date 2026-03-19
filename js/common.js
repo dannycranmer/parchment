@@ -20,7 +20,7 @@ function renderFooter() {
   f.className = 'footer';
   f.innerHTML = `🔒 Your files never leave your device &nbsp;·&nbsp;
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
-    Need developer tools? <a href="https://dairylea.github.io/devtoolbox/" target="_blank" rel="noopener">Try DevToolbox</a>
+    Need developer tools? <a href="https://dannycranmer.github.io/devtoolbox/" target="_blank" rel="noopener">Try DevToolbox</a>
     <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source</span>`;
   document.body.appendChild(f);
 }
