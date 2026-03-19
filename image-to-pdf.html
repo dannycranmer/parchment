@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Image to PDF — Parchment</title>
+  <meta name="description" content="Convert JPG, PNG, and WebP images to PDF for free. No upload required — your files stay on your device.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="tool-header">
+    <h1>🖼️ Image to PDF</h1>
+    <p>Convert images to a PDF document</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple>
+      <div class="icon">🖼️</div>
+      <p>Drag &amp; drop images here, or <span class="browse">browse files</span></p>
+      <p style="font-size:.8rem;margin-top:.25rem;color:var(--text-muted)">Supports JPG, PNG, WebP</p>
+    </div>
+
+    <div class="image-grid" id="imageGrid"></div>
+
+    <div id="optionsPanel" style="display:none">
+      <div class="options">
+        <h3>PDF Options</h3>
+        <div class="option-row">
+          <label for="pageSize">Page size:</label>
+          <select id="pageSize">
+            <option value="a4">A4 (210 × 297 mm)</option>
+            <option value="letter">US Letter (8.5 × 11 in)</option>
+            <option value="fit">Fit to image</option>
+          </select>
+        </div>
+        <div class="option-row">
+          <label for="orientation">Orientation:</label>
+          <select id="orientation">
+            <option value="auto">Auto-detect</option>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="convertBtn">Convert to PDF</button>
+        <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('image-to-pdf'); renderFooter();
+
+    const images = []; // { name, type, dataUrl, width, height, bytes }
+    const imageGrid = document.getElementById('imageGrid');
+    const optionsPanel = document.getElementById('optionsPanel');
+    const convertBtn = document.getElementById('convertBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+
+    function updateUI() {
+      optionsPanel.style.display = images.length ? '' : 'none';
+      imageGrid.innerHTML = '';
+      images.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'image-thumb';
+        div.innerHTML = `<img src="${img.dataUrl}" alt="${img.name}">
+          <button class="remove" data-i="${i}">✕</button>
+          <div class="order">${i + 1}</div>`;
+        imageGrid.appendChild(div);
+      });
+    }
+
+    imageGrid.addEventListener('click', e => {
+      const btn = e.target.closest('.remove');
+      if (btn) { images.splice(parseInt(btn.dataset.i), 1); updateUI(); }
+    });
+
+    clearBtn.addEventListener('click', () => { images.length = 0; updateUI(); setStatus(status, ''); });
+
+    async function addImages(files) {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          setStatus(status, `"${file.name}" is not a supported image`, 'error');
+          continue;
+        }
+        try {
+          const dataUrl = await readAsDataURL(file);
+          const { width, height } = await getImageDimensions(dataUrl);
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          images.push({ name: file.name, type: file.type, dataUrl, width, height, bytes });
+        } catch (err) {
+          setStatus(status, `Could not read "${file.name}"`, 'error');
+        }
+      }
+      updateUI();
+      if (images.length) setStatus(status, '');
+    }
+
+    function readAsDataURL(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function getImageDimensions(url) {
+      return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => res({ width: img.width, height: img.height });
+        img.onerror = rej;
+        img.src = url;
+      });
+    }
+
+    setupDropZone(document.getElementById('dropZone'), {
+      accept: f => f.type.startsWith('image/'),
+      onFiles: addImages
+    });
+
+    const PAGE_SIZES = {
+      a4: [595.28, 841.89],       // points
+      letter: [612, 792],
+    };
+
+    convertBtn.addEventListener('click', async () => {
+      if (!images.length) return;
+      convertBtn.disabled = true;
+      setStatus(status, 'Converting…');
+      setProgress(progress, 10);
+
+      try {
+        const doc = await PDFLib.PDFDocument.create();
+        const pageSizeOpt = document.getElementById('pageSize').value;
+        const orientOpt = document.getElementById('orientation').value;
+
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          let embedded;
+
+          if (img.type === 'image/png') {
+            embedded = await doc.embedPng(img.bytes);
+          } else if (img.type === 'image/jpeg' || img.type === 'image/jpg') {
+            embedded = await doc.embedJpg(img.bytes);
+          } else {
+            // WebP or other — convert to PNG via canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            const bitmap = await createImageBitmap(new Blob([img.bytes], { type: img.type }));
+            ctx.drawImage(bitmap, 0, 0);
+            const pngData = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            const pngBytes = new Uint8Array(await pngData.arrayBuffer());
+            embedded = await doc.embedPng(pngBytes);
+          }
+
+          const imgW = embedded.width, imgH = embedded.height;
+          let pageW, pageH;
+
+          if (pageSizeOpt === 'fit') {
+            pageW = imgW; pageH = imgH;
+          } else {
+            [pageW, pageH] = PAGE_SIZES[pageSizeOpt];
+            // Handle orientation
+            const imgIsLandscape = imgW > imgH;
+            if (orientOpt === 'landscape' || (orientOpt === 'auto' && imgIsLandscape)) {
+              [pageW, pageH] = [Math.max(pageW, pageH), Math.min(pageW, pageH)];
+            } else {
+              [pageW, pageH] = [Math.min(pageW, pageH), Math.max(pageW, pageH)];
+            }
+          }
+
+          const page = doc.addPage([pageW, pageH]);
+
+          // Scale image to fit within page with margins (unless fit-to-image)
+          let drawW, drawH;
+          if (pageSizeOpt === 'fit') {
+            drawW = imgW; drawH = imgH;
+          } else {
+            const margin = 36; // 0.5 inch
+            const availW = pageW - margin * 2, availH = pageH - margin * 2;
+            const scale = Math.min(availW / imgW, availH / imgH, 1);
+            drawW = imgW * scale; drawH = imgH * scale;
+          }
+
+          const x = (pageW - drawW) / 2;
+          const y = (pageH - drawH) / 2;
+          page.drawImage(embedded, { x, y, width: drawW, height: drawH });
+
+          setProgress(progress, 10 + (80 * (i + 1) / images.length));
+        }
+
+        const bytes = await doc.save();
+        downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'images.pdf');
+        setProgress(progress, 100);
+        setStatus(status, `Converted ${images.length} image${images.length !== 1 ? 's' : ''} to PDF`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      convertBtn.disabled = false;
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

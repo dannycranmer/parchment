@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Split PDF — Parchment</title>
+  <meta name="description" content="Split PDF files or extract specific pages for free. No upload required — your files stay on your device.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="tool-header">
+    <h1>✂️ Split PDF</h1>
+    <p>Extract pages or split a PDF into individual files</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="page-preview" id="pagePreview"></div>
+
+      <div class="options">
+        <h3>Extract Options</h3>
+        <div class="option-row">
+          <label for="pageRange">Pages:</label>
+          <input type="text" id="pageRange" placeholder="e.g. 1,3,5-8 or leave blank for all">
+        </div>
+        <div class="option-row" style="font-size:.85rem;color:var(--text-muted)">
+          Click page thumbnails to select, or type page numbers above. Use commas and ranges (e.g. 1-3,5,7-9).
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="extractBtn">Extract Pages as PDF</button>
+        <button class="btn btn-secondary" id="splitAllBtn">Split into Individual Pages</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('split'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfData = null, pageCount = 0, selectedPages = new Set();
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const pagePreview = document.getElementById('pagePreview');
+    const pageRange = document.getElementById('pageRange');
+    const extractBtn = document.getElementById('extractBtn');
+    const splitAllBtn = document.getElementById('splitAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+
+    function reset() {
+      pdfData = null; pageCount = 0; selectedPages.clear();
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      pagePreview.innerHTML = '';
+      pageRange.value = '';
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        pageCount = doc.getPageCount();
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+
+        // Render thumbnails (first 50 pages max for performance)
+        renderThumbnails(Math.min(pageCount, 50));
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    async function renderThumbnails(max) {
+      pagePreview.innerHTML = '';
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+        for (let i = 1; i <= max; i++) {
+          const page = await pdf.getPage(i);
+          const vp = page.getViewport({ scale: 0.3 });
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width; canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+          const thumb = document.createElement('div');
+          thumb.className = 'page-thumb';
+          thumb.dataset.page = i;
+          thumb.appendChild(canvas);
+          const span = document.createElement('span');
+          span.textContent = 'Page ' + i;
+          thumb.appendChild(span);
+          thumb.addEventListener('click', () => togglePage(i, thumb));
+          pagePreview.appendChild(thumb);
+        }
+        if (pageCount > max) {
+          const note = document.createElement('div');
+          note.style.cssText = 'grid-column:1/-1;text-align:center;font-size:.85rem;color:var(--text-muted);padding:.5rem';
+          note.textContent = `Showing first ${max} of ${pageCount} pages. Use the page range input for remaining pages.`;
+          pagePreview.appendChild(note);
+        }
+      } catch (e) {
+        // Thumbnail rendering failed — not critical, user can still type page ranges
+      }
+    }
+
+    function togglePage(num, el) {
+      if (selectedPages.has(num)) { selectedPages.delete(num); el.classList.remove('selected'); }
+      else { selectedPages.add(num); el.classList.add('selected'); }
+      // Sync to input
+      const sorted = Array.from(selectedPages).sort((a, b) => a - b);
+      pageRange.value = compactRanges(sorted);
+    }
+
+    function compactRanges(arr) {
+      if (!arr.length) return '';
+      const ranges = []; let start = arr[0], end = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i] === end + 1) { end = arr[i]; }
+        else { ranges.push(start === end ? '' + start : start + '-' + end); start = end = arr[i]; }
+      }
+      ranges.push(start === end ? '' + start : start + '-' + end);
+      return ranges.join(',');
+    }
+
+    function parseRanges(str, max) {
+      if (!str.trim()) return Array.from({ length: max }, (_, i) => i); // 0-indexed for pdf-lib
+      const pages = new Set();
+      for (const part of str.split(',')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const m = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (m) {
+          const a = parseInt(m[1]), b = parseInt(m[2]);
+          for (let i = Math.max(1, Math.min(a, b)); i <= Math.min(max, Math.max(a, b)); i++) pages.add(i - 1);
+        } else {
+          const n = parseInt(trimmed);
+          if (n >= 1 && n <= max) pages.add(n - 1);
+        }
+      }
+      return Array.from(pages).sort((a, b) => a - b);
+    }
+
+    extractBtn.addEventListener('click', async () => {
+      const indices = parseRanges(pageRange.value, pageCount);
+      if (!indices.length) { setStatus(status, 'No pages selected', 'error'); return; }
+      extractBtn.disabled = true;
+      setStatus(status, 'Extracting pages…');
+      setProgress(progress, 20);
+      try {
+        const src = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        const dest = await PDFLib.PDFDocument.create();
+        const pages = await dest.copyPages(src, indices);
+        pages.forEach(p => dest.addPage(p));
+        setProgress(progress, 80);
+        const bytes = await dest.save();
+        downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'extracted.pdf');
+        setProgress(progress, 100);
+        setStatus(status, `Extracted ${indices.length} page${indices.length !== 1 ? 's' : ''}`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      extractBtn.disabled = false;
+    });
+
+    splitAllBtn.addEventListener('click', async () => {
+      splitAllBtn.disabled = true;
+      setStatus(status, 'Splitting into individual pages…');
+      setProgress(progress, 10);
+      try {
+        const src = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        // For small page counts, download individual PDFs; for many, we'd ideally zip but keep it simple
+        if (pageCount > 20) {
+          setStatus(status, `Splitting ${pageCount} pages — each will download separately…`);
+        }
+        for (let i = 0; i < pageCount; i++) {
+          const dest = await PDFLib.PDFDocument.create();
+          const [page] = await dest.copyPages(src, [i]);
+          dest.addPage(page);
+          const bytes = await dest.save();
+          downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `page-${i + 1}.pdf`);
+          setProgress(progress, 10 + (85 * (i + 1) / pageCount));
+        }
+        setProgress(progress, 100);
+        setStatus(status, `Split into ${pageCount} individual pages`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      splitAllBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
