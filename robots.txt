@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dannycranmer.github.io/parchment/sitemap.xml
