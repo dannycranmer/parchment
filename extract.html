@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Extract Pages from PDF Online Free — Parchment</title>
+  <meta name="description" content="Extract specific pages from a PDF into a new file for free. Select pages with checkboxes, preview thumbnails. No upload — your files stay on your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/extract.html">
+  <meta property="og:title" content="Extract Pages from PDF Online Free — Parchment">
+  <meta property="og:description" content="Select specific pages from a PDF to extract into a new file. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .extract-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem;margin-top:1rem}
+    .extract-thumb{background:#fff;border:2px solid var(--border);border-radius:8px;padding:.5rem;text-align:center;position:relative;cursor:pointer;user-select:none;transition:border-color .15s,box-shadow .15s,transform .15s}
+    .extract-thumb:hover{border-color:var(--amber);transform:scale(1.02)}
+    .extract-thumb.selected{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal)}
+    .extract-thumb canvas{width:100%;display:block;border-radius:4px;pointer-events:none}
+    .extract-thumb .page-label{font-size:.75rem;color:var(--text-muted);margin-top:.3rem;pointer-events:none}
+    .extract-thumb .page-num{position:absolute;top:4px;left:4px;background:var(--teal);color:#fff;font-size:.65rem;font-weight:700;padding:1px 5px;border-radius:4px;pointer-events:none}
+    .extract-thumb .check-mark{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;transition:background .15s,border-color .15s}
+    .extract-thumb.selected .check-mark{background:var(--teal);border-color:var(--teal);color:#fff}
+    .extract-controls{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:1rem;padding:.75rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
+    .extract-controls .selection-info{margin-left:auto;font-size:.85rem;color:var(--text-muted)}
+    .btn-sm{padding:.35rem .75rem;font-size:.85rem;border-radius:6px;border:1px solid var(--border);background:var(--bg-alt);cursor:pointer;transition:background .2s,color .2s}
+    .btn-sm:hover{background:var(--teal);color:#fff;border-color:var(--teal)}
+  </style>
+</head>
+<body>
+  <div class="tool-header">
+    <h1>📋 Extract PDF Pages</h1>
+    <p>Select specific pages to extract into a new PDF</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="extract-controls">
+        <button class="btn-sm" id="selectAllBtn">Select All</button>
+        <button class="btn-sm" id="deselectAllBtn">Deselect All</button>
+        <button class="btn-sm" id="invertBtn">Invert Selection</button>
+        <button class="btn-sm" id="selectOddBtn">Odd Pages</button>
+        <button class="btn-sm" id="selectEvenBtn">Even Pages</button>
+        <span class="selection-info" id="selectionInfo">0 pages selected</span>
+      </div>
+
+      <div class="extract-grid" id="pageGrid"></div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="extractBtn">Extract Selected Pages</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('extract'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfData = null, pageCount = 0;
+    const selectedPages = new Set();
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const pageGrid = document.getElementById('pageGrid');
+    const extractBtn = document.getElementById('extractBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+    const selectionInfo = document.getElementById('selectionInfo');
+    let fileName = 'extracted.pdf';
+
+    function reset() {
+      pdfData = null; pageCount = 0; selectedPages.clear();
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      pageGrid.innerHTML = '';
+      setStatus(status, '');
+      updateSelectionInfo();
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    function updateSelectionInfo() {
+      const n = selectedPages.size;
+      selectionInfo.textContent = n + ' page' + (n !== 1 ? 's' : '') + ' selected';
+    }
+
+    function updateThumbStates() {
+      pageGrid.querySelectorAll('.extract-thumb').forEach(thumb => {
+        const page = parseInt(thumb.dataset.page);
+        if (selectedPages.has(page)) {
+          thumb.classList.add('selected');
+          thumb.querySelector('.check-mark').textContent = '✓';
+        } else {
+          thumb.classList.remove('selected');
+          thumb.querySelector('.check-mark').textContent = '';
+        }
+      });
+      updateSelectionInfo();
+    }
+
+    document.getElementById('selectAllBtn').addEventListener('click', () => {
+      for (let i = 1; i <= pageCount; i++) selectedPages.add(i);
+      updateThumbStates();
+    });
+
+    document.getElementById('deselectAllBtn').addEventListener('click', () => {
+      selectedPages.clear();
+      updateThumbStates();
+    });
+
+    document.getElementById('invertBtn').addEventListener('click', () => {
+      for (let i = 1; i <= pageCount; i++) {
+        if (selectedPages.has(i)) selectedPages.delete(i);
+        else selectedPages.add(i);
+      }
+      updateThumbStates();
+    });
+
+    document.getElementById('selectOddBtn').addEventListener('click', () => {
+      selectedPages.clear();
+      for (let i = 1; i <= pageCount; i += 2) selectedPages.add(i);
+      updateThumbStates();
+    });
+
+    document.getElementById('selectEvenBtn').addEventListener('click', () => {
+      selectedPages.clear();
+      for (let i = 2; i <= pageCount; i += 2) selectedPages.add(i);
+      updateThumbStates();
+    });
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        pageCount = doc.getPageCount();
+        fileName = file.name.replace(/\.pdf$/i, '') + '-extracted.pdf';
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        selectedPages.clear();
+        updateSelectionInfo();
+        setStatus(status, '');
+
+        await renderThumbnails();
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    async function renderThumbnails() {
+      const maxPreview = Math.min(pageCount, 100);
+      pageGrid.innerHTML = '';
+      setStatus(status, 'Rendering page previews…');
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+
+        for (let i = 1; i <= maxPreview; i++) {
+          const page = await pdf.getPage(i);
+          const vp = page.getViewport({ scale: 0.35 });
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width; canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+          const thumb = document.createElement('div');
+          thumb.className = 'extract-thumb';
+          thumb.dataset.page = i;
+
+          const pageNum = document.createElement('div');
+          pageNum.className = 'page-num';
+          pageNum.textContent = i;
+          thumb.appendChild(pageNum);
+
+          const checkMark = document.createElement('div');
+          checkMark.className = 'check-mark';
+          thumb.appendChild(checkMark);
+
+          thumb.appendChild(canvas);
+
+          const label = document.createElement('div');
+          label.className = 'page-label';
+          label.textContent = 'Page ' + i;
+          thumb.appendChild(label);
+
+          thumb.addEventListener('click', () => {
+            if (selectedPages.has(i)) selectedPages.delete(i);
+            else selectedPages.add(i);
+            updateThumbStates();
+          });
+
+          pageGrid.appendChild(thumb);
+        }
+
+        if (pageCount > maxPreview) {
+          const note = document.createElement('div');
+          note.style.cssText = 'grid-column:1/-1;text-align:center;font-size:.85rem;color:var(--text-muted);padding:.5rem';
+          note.textContent = `Showing first ${maxPreview} of ${pageCount} pages. Use Select All to include all pages.`;
+          pageGrid.appendChild(note);
+        }
+
+        setStatus(status, '');
+      } catch (e) {
+        setStatus(status, 'Could not render previews — you can still use Select All', 'error');
+      }
+    }
+
+    extractBtn.addEventListener('click', async () => {
+      if (selectedPages.size === 0) {
+        setStatus(status, 'No pages selected — click page thumbnails to select', 'error'); return;
+      }
+      extractBtn.disabled = true;
+      setStatus(status, 'Extracting pages…');
+      setProgress(progress, 10);
+      try {
+        const src = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        const dest = await PDFLib.PDFDocument.create();
+        const sorted = Array.from(selectedPages).sort((a, b) => a - b);
+        const indices = sorted.map(p => p - 1); // convert to 0-based
+        const pages = await dest.copyPages(src, indices);
+        pages.forEach(p => dest.addPage(p));
+        setProgress(progress, 80);
+        const bytes = await dest.save();
+        downloadBlob(new Blob([bytes], { type: 'application/pdf' }), fileName);
+        setProgress(progress, 100);
+        setStatus(status, `Extracted ${sorted.length} page${sorted.length !== 1 ? 's' : ''} — downloading`, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      extractBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
