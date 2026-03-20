@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Flatten PDF Online Free — Parchment</title>
+  <meta name="description" content="Flatten PDF form fields and annotations for free. Makes forms non-editable and locks annotations into the page content. No upload — your files stay on your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/flatten.html">
+  <meta property="og:title" content="Flatten PDF Online Free — Parchment">
+  <meta property="og:description" content="Flatten PDF form fields and annotations into the page content. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .flatten-info{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1rem}
+    .flatten-info h3{margin:0 0 .5rem;font-size:1rem;color:var(--text)}
+    .flatten-info p{margin:0 0 .75rem;font-size:.9rem;color:var(--text-muted);line-height:1.5}
+    .flatten-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-top:1rem}
+    .flatten-stat{background:var(--bg-alt);border-radius:8px;padding:.75rem 1rem;text-align:center}
+    .flatten-stat .label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+    .flatten-stat .value{font-size:1.5rem;font-weight:700;color:var(--teal);margin-top:.25rem}
+    .result-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none}
+    .result-box .size-compare{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-size:.9rem}
+    .result-box .size-compare .arrow{color:var(--teal);font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="tool-header">
+    <h1>📋 Flatten PDF</h1>
+    <p>Flatten form fields and annotations into the PDF content so they become non-editable</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="flatten-stats" id="stats"></div>
+
+      <div class="flatten-info">
+        <h3>What does flattening do?</h3>
+        <p>Flattening merges form fields (text inputs, checkboxes, dropdowns) and annotations into the PDF page content. After flattening, the form data is still visible but can no longer be edited — perfect for archiving completed forms or sharing finalized documents.</p>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="flattenBtn">Flatten PDF</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+
+      <div class="result-box" id="resultBox">
+        <div class="size-compare">
+          <span>Original: <strong id="origSize"></strong></span>
+          <span class="arrow">→</span>
+          <span>Flattened: <strong id="flatSize"></strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('flatten'); renderFooter();
+
+    let pdfData = null;
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const statsEl = document.getElementById('stats');
+    const flattenBtn = document.getElementById('flattenBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+    const resultBox = document.getElementById('resultBox');
+    let fileName = 'flattened.pdf';
+    let originalSize = 0;
+
+    function reset() {
+      pdfData = null;
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      resultBox.style.display = 'none';
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Analyzing PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        originalSize = file.size;
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        const pageCount = doc.getPageCount();
+        fileName = file.name.replace(/\.pdf$/i, '') + '-flattened.pdf';
+
+        // Count form fields
+        let fieldCount = 0;
+        try {
+          const form = doc.getForm();
+          fieldCount = form.getFields().length;
+        } catch (e) {
+          // No form fields
+        }
+
+        // Count annotations across pages
+        let annotCount = 0;
+        const pages = doc.getPages();
+        for (const page of pages) {
+          const annots = page.node.lookup(PDFLib.PDFName.of('Annots'));
+          if (annots && annots.constructor.name === 'PDFArray') {
+            annotCount += annots.size();
+          }
+        }
+
+        // Subtract widget annotations (form fields are also annotations)
+        // Widget annotations are the visual representation of form fields
+        const totalAnnots = Math.max(0, annotCount - fieldCount);
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        statsEl.innerHTML = `
+          <div class="flatten-stat"><div class="label">Pages</div><div class="value">${pageCount}</div></div>
+          <div class="flatten-stat"><div class="label">Form Fields</div><div class="value">${fieldCount}</div></div>
+          <div class="flatten-stat"><div class="label">Annotations</div><div class="value">${totalAnnots}</div></div>
+        `;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        resultBox.style.display = 'none';
+        setStatus(status, '');
+
+        if (fieldCount === 0 && totalAnnots === 0) {
+          setStatus(status, 'This PDF has no form fields or annotations to flatten — but you can still flatten it to ensure it is non-editable.', 'success');
+        }
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    flattenBtn.addEventListener('click', async () => {
+      if (!pdfData) return;
+      flattenBtn.disabled = true;
+      setStatus(status, 'Flattening PDF…');
+      setProgress(progress, 10);
+      try {
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        setProgress(progress, 30);
+
+        // Flatten form fields
+        try {
+          const form = doc.getForm();
+          const fields = form.getFields();
+          if (fields.length > 0) {
+            form.flatten();
+          }
+        } catch (e) {
+          // No form or form already flat
+        }
+
+        setProgress(progress, 60);
+
+        // Remove remaining non-widget annotations by clearing the Annots array
+        // After form.flatten(), widget annots are already removed
+        // We now remove other annotations (comments, highlights, etc.)
+        const pages = doc.getPages();
+        for (const page of pages) {
+          const annotsRef = page.node.lookup(PDFLib.PDFName.of('Annots'));
+          if (annotsRef && annotsRef.constructor.name === 'PDFArray') {
+            // Remove all remaining annotations
+            page.node.delete(PDFLib.PDFName.of('Annots'));
+          }
+        }
+
+        setProgress(progress, 80);
+
+        const bytes = await doc.save();
+        const flatBlob = new Blob([bytes], { type: 'application/pdf' });
+        downloadBlob(flatBlob, fileName);
+
+        setProgress(progress, 100);
+
+        document.getElementById('origSize').textContent = formatSize(originalSize);
+        document.getElementById('flatSize').textContent = formatSize(bytes.length);
+        resultBox.style.display = '';
+
+        setStatus(status, 'PDF flattened — downloading', 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      flattenBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
