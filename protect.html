@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Password Protect PDF Online Free — Parchment</title>
+  <meta name="description" content="Add password protection to your PDF files for free. No upload required — your files stay on your device. 100% private and secure.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="tool-header">
+    <h1>🔐 Protect PDF</h1>
+    <p>Add password protection to your PDF files</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="options">
+        <h3>Password Protection</h3>
+        <div class="option-row">
+          <label for="userPassword">Password:</label>
+          <div style="position:relative;flex:1;display:flex;gap:.5rem;align-items:center">
+            <input type="password" id="userPassword" placeholder="Enter password to protect PDF" style="flex:1">
+            <button type="button" class="btn btn-secondary" id="togglePw" style="padding:.4rem .7rem;font-size:.85rem" title="Show/hide password">👁️</button>
+          </div>
+        </div>
+        <div class="option-row">
+          <label for="confirmPassword">Confirm:</label>
+          <input type="password" id="confirmPassword" placeholder="Confirm password" style="flex:1">
+        </div>
+        <div class="option-row" style="font-size:.85rem;color:var(--text-muted)">
+          Anyone opening this PDF will need to enter the password. Uses 128-bit RC4 encryption (PDF 1.6 standard).
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="protectBtn" disabled>Protect PDF</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('protect'); renderFooter();
+
+    let pdfData = null, pdfFileName = '';
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const userPassword = document.getElementById('userPassword');
+    const confirmPassword = document.getElementById('confirmPassword');
+    const protectBtn = document.getElementById('protectBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const togglePw = document.getElementById('togglePw');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+
+    function reset() {
+      pdfData = null; pdfFileName = '';
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      userPassword.value = '';
+      confirmPassword.value = '';
+      protectBtn.disabled = true;
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    togglePw.addEventListener('click', () => {
+      const type = userPassword.type === 'password' ? 'text' : 'password';
+      userPassword.type = type;
+      confirmPassword.type = type;
+    });
+
+    function validateForm() {
+      protectBtn.disabled = !(pdfData && userPassword.value.length > 0 && userPassword.value === confirmPassword.value);
+    }
+    userPassword.addEventListener('input', validateForm);
+    confirmPassword.addEventListener('input', validateForm);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        const pageCount = doc.getPageCount();
+        pdfFileName = file.name;
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+        userPassword.focus();
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+
+    /* ── PDF Encryption (Standard Security Handler, Rev 3, 128-bit RC4) ── */
+
+    // MD5 hash
+    function md5(input) {
+      const data = input instanceof Uint8Array ? input : new Uint8Array(input);
+      function cmn(q,a,b,x,s,t){a=add(add(a,q),add(x,t));return add((a<<s)|(a>>>(32-s)),b)}
+      function ff(a,b,c,d,x,s,t){return cmn((b&c)|((~b)&d),a,b,x,s,t)}
+      function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&(~d)),a,b,x,s,t)}
+      function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}
+      function ii(a,b,c,d,x,s,t){return cmn(c^(b|(~d)),a,b,x,s,t)}
+      function add(a,b){return(a+b)|0}
+
+      function cycle(st,k){
+        let a=st[0],b=st[1],c=st[2],d=st[3];
+        a=ff(a,b,c,d,k[0],7,-680876936);d=ff(d,a,b,c,k[1],12,-389564586);c=ff(c,d,a,b,k[2],17,606105819);b=ff(b,c,d,a,k[3],22,-1044525330);
+        a=ff(a,b,c,d,k[4],7,-176418897);d=ff(d,a,b,c,k[5],12,1200080426);c=ff(c,d,a,b,k[6],17,-1473231341);b=ff(b,c,d,a,k[7],22,-45705983);
+        a=ff(a,b,c,d,k[8],7,1770035416);d=ff(d,a,b,c,k[9],12,-1958414417);c=ff(c,d,a,b,k[10],17,-42063);b=ff(b,c,d,a,k[11],22,-1990404162);
+        a=ff(a,b,c,d,k[12],7,1804603682);d=ff(d,a,b,c,k[13],12,-40341101);c=ff(c,d,a,b,k[14],17,-1502002290);b=ff(b,c,d,a,k[15],22,1236535329);
+        a=gg(a,b,c,d,k[1],5,-165796510);d=gg(d,a,b,c,k[6],9,-1069501632);c=gg(c,d,a,b,k[11],14,643717713);b=gg(b,c,d,a,k[0],20,-373897302);
+        a=gg(a,b,c,d,k[5],5,-701558691);d=gg(d,a,b,c,k[10],9,38016083);c=gg(c,d,a,b,k[15],14,-660478335);b=gg(b,c,d,a,k[4],20,-405537848);
+        a=gg(a,b,c,d,k[9],5,568446438);d=gg(d,a,b,c,k[14],9,-1019803690);c=gg(c,d,a,b,k[3],14,-187363961);b=gg(b,c,d,a,k[8],20,1163531501);
+        a=gg(a,b,c,d,k[13],5,-1444681467);d=gg(d,a,b,c,k[2],9,-51403784);c=gg(c,d,a,b,k[7],14,1735328473);b=gg(b,c,d,a,k[12],20,-1926607734);
+        a=hh(a,b,c,d,k[5],4,-378558);d=hh(d,a,b,c,k[8],11,-2022574463);c=hh(c,d,a,b,k[11],16,1839030562);b=hh(b,c,d,a,k[14],23,-35309556);
+        a=hh(a,b,c,d,k[1],4,-1530992060);d=hh(d,a,b,c,k[4],11,1272893353);c=hh(c,d,a,b,k[7],16,-155497632);b=hh(b,c,d,a,k[10],23,-1094730640);
+        a=hh(a,b,c,d,k[13],4,681279174);d=hh(d,a,b,c,k[0],11,-358537222);c=hh(c,d,a,b,k[3],16,-722521979);b=hh(b,c,d,a,k[6],23,76029189);
+        a=hh(a,b,c,d,k[9],4,-640364487);d=hh(d,a,b,c,k[12],11,-421815835);c=hh(c,d,a,b,k[15],16,530742520);b=hh(b,c,d,a,k[2],23,-995338651);
+        a=ii(a,b,c,d,k[0],6,-198630844);d=ii(d,a,b,c,k[7],10,1126891415);c=ii(c,d,a,b,k[14],15,-1416354905);b=ii(b,c,d,a,k[5],21,-57434055);
+        a=ii(a,b,c,d,k[12],6,1700485571);d=ii(d,a,b,c,k[3],10,-1894986606);c=ii(c,d,a,b,k[10],15,-1051523);b=ii(b,c,d,a,k[1],21,-2054922799);
+        a=ii(a,b,c,d,k[8],6,1873313359);d=ii(d,a,b,c,k[15],10,-30611744);c=ii(c,d,a,b,k[6],15,-1560198380);b=ii(b,c,d,a,k[13],21,1309151649);
+        a=ii(a,b,c,d,k[4],6,-145523070);d=ii(d,a,b,c,k[11],10,-1120210379);c=ii(c,d,a,b,k[2],15,718787259);b=ii(b,c,d,a,k[9],21,-343485551);
+        st[0]=add(a,st[0]);st[1]=add(b,st[1]);st[2]=add(c,st[2]);st[3]=add(d,st[3]);
+      }
+
+      const n=data.length;
+      const st=[1732584193,-271733879,-1732584194,271733878];
+      let i;
+      for(i=64;i<=n;i+=64){
+        const w=new Array(16);
+        for(let j=0;j<64;j+=4) w[j>>2]=data[i-64+j]|(data[i-64+j+1]<<8)|(data[i-64+j+2]<<16)|(data[i-64+j+3]<<24);
+        cycle(st,w);
+      }
+      const tail=new Array(16).fill(0);
+      const rem=i-64;
+      for(let j=0;j<n-rem;j++) tail[j>>2]|=data[rem+j]<<((j%4)*8);
+      tail[(n-rem)>>2]|=0x80<<(((n-rem)%4)*8);
+      if(n-rem>55){cycle(st,tail);tail.fill(0)}
+      tail[14]=(n*8)>>>0;
+      tail[15]=Math.floor(n*8/0x100000000);
+      cycle(st,tail);
+      const r=new Uint8Array(16);
+      for(let j=0;j<4;j++){r[j*4]=st[j]&0xFF;r[j*4+1]=(st[j]>>8)&0xFF;r[j*4+2]=(st[j]>>16)&0xFF;r[j*4+3]=(st[j]>>24)&0xFF}
+      return r;
+    }
+
+    function rc4(key,data){
+      const s=new Uint8Array(256);
+      for(let i=0;i<256;i++)s[i]=i;
+      let j=0;
+      for(let i=0;i<256;i++){j=(j+s[i]+key[i%key.length])&255;[s[i],s[j]]=[s[j],s[i]]}
+      const out=new Uint8Array(data.length);
+      let x=0;j=0;
+      for(let i=0;i<data.length;i++){x=(x+1)&255;j=(j+s[x])&255;[s[x],s[j]]=[s[j],s[x]];out[i]=data[i]^s[(s[x]+s[j])&255]}
+      return out;
+    }
+
+    const PAD=new Uint8Array([0x28,0xBF,0x4E,0x5E,0x4D,0x75,0x8A,0x41,0x64,0x00,0x4B,0x49,0x43,0x48,0x45,0x47,0x53,0x45,0x43,0x52,0x45,0x54,0x40,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39]);
+
+    function padPw(s){
+      const e=new TextEncoder().encode(s);
+      const p=new Uint8Array(32);
+      p.set(e.slice(0,32));
+      if(e.length<32)p.set(PAD.slice(0,32-e.length),e.length);
+      return p;
+    }
+
+    function computeOwnerHash(ownerPw,userPw){
+      let h=md5(padPw(ownerPw));
+      for(let i=0;i<50;i++)h=md5(h);
+      const key=h.slice(0,16);
+      let enc=rc4(key,padPw(userPw));
+      for(let i=1;i<=19;i++){const k=new Uint8Array(16);for(let j=0;j<16;j++)k[j]=key[j]^i;enc=rc4(k,enc)}
+      return enc;
+    }
+
+    function computeEncKey(pw,O,P,fileId){
+      const pp=padPw(pw);
+      const buf=new Uint8Array(pp.length+O.length+4+fileId.length);
+      let off=0;
+      buf.set(pp,off);off+=pp.length;
+      buf.set(O,off);off+=O.length;
+      buf[off++]=P&0xFF;buf[off++]=(P>>8)&0xFF;buf[off++]=(P>>16)&0xFF;buf[off++]=(P>>24)&0xFF;
+      buf.set(fileId,off);
+      let h=md5(buf);
+      for(let i=0;i<50;i++)h=md5(h.slice(0,16));
+      return h.slice(0,16);
+    }
+
+    function computeUserHash(encKey,fileId){
+      const buf=new Uint8Array(PAD.length+fileId.length);
+      buf.set(PAD);buf.set(fileId,PAD.length);
+      let h=md5(buf);
+      let enc=rc4(encKey,h);
+      for(let i=1;i<=19;i++){const k=new Uint8Array(16);for(let j=0;j<16;j++)k[j]=encKey[j]^i;enc=rc4(k,enc)}
+      const r=new Uint8Array(32);r.set(enc);
+      return r;
+    }
+
+    function objEncKey(encKey,objNum,genNum){
+      const buf=new Uint8Array(21);
+      buf.set(encKey);
+      buf[16]=objNum&0xFF;buf[17]=(objNum>>8)&0xFF;buf[18]=(objNum>>16)&0xFF;
+      buf[19]=genNum&0xFF;buf[20]=(genNum>>8)&0xFF;
+      return md5(buf); // Use full 16 bytes (capped at key+5=21 input, output always 16)
+    }
+
+    function toHex(arr){return Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('')}
+
+    /* ── Encrypt PDF by raw byte manipulation ── */
+
+    protectBtn.addEventListener('click', async () => {
+      const pw = userPassword.value;
+      if (!pw) { setStatus(status, 'Please enter a password', 'error'); return; }
+      if (pw !== confirmPassword.value) { setStatus(status, 'Passwords do not match', 'error'); return; }
+
+      protectBtn.disabled = true;
+      setStatus(status, 'Encrypting PDF…');
+      setProgress(progress, 10);
+
+      try {
+        // Load with pdf-lib and re-save to normalize
+        const srcDoc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        setProgress(progress, 20);
+
+        // Access internal context for encryption
+        const ctx = srcDoc.context;
+        const fileId = new Uint8Array(16);
+        crypto.getRandomValues(fileId);
+        const P = -3392; // permissions: allow printing, no other restrictions need password to open
+
+        const O = computeOwnerHash(pw, pw);
+        const encKey = computeEncKey(pw, O, P, fileId);
+        const U = computeUserHash(encKey, fileId);
+
+        setProgress(progress, 40);
+
+        // Encrypt all streams and strings in the document
+        const allObjects = ctx.enumerateIndirectObjects();
+        let processedCount = 0;
+        const totalObjects = allObjects.length;
+
+        for (const [ref, obj] of allObjects) {
+          const oNum = ref.objectNumber;
+          const gNum = ref.generationNumber;
+          const oKey = objEncKey(encKey, oNum, gNum);
+
+          // Encrypt stream contents
+          if (obj && obj.contents && obj.contents instanceof Uint8Array) {
+            obj.contents = rc4(oKey, obj.contents);
+          }
+
+          // Recursively encrypt strings in dicts and arrays
+          encryptStringsIn(obj, oKey);
+
+          processedCount++;
+          if (processedCount % 50 === 0) {
+            setProgress(progress, 40 + (40 * processedCount / totalObjects));
+          }
+        }
+
+        setProgress(progress, 80);
+
+        // Create Encrypt dictionary as a direct object in trailer
+        const encDict = ctx.obj({
+          Filter: 'Standard',
+          V: 2,
+          R: 3,
+          Length: 128,
+          P: P,
+          O: PDFLib.PDFHexString.of(toHex(O)),
+          U: PDFLib.PDFHexString.of(toHex(U)),
+        });
+
+        const encRef = ctx.register(encDict);
+
+        // File ID
+        const idHex = toHex(fileId);
+        const idArr = ctx.obj([PDFLib.PDFHexString.of(idHex), PDFLib.PDFHexString.of(idHex)]);
+
+        // Set trailer entries
+        ctx.trailerInfo.Encrypt = encRef;
+        ctx.trailerInfo.ID = idArr;
+
+        setProgress(progress, 90);
+
+        const outBytes = await srcDoc.save();
+
+        const outName = pdfFileName.replace(/\.pdf$/i, '') + '-protected.pdf';
+        downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), outName);
+        setProgress(progress, 100);
+        setStatus(status, 'PDF protected successfully! Opening will require the password.', 'success');
+      } catch (err) {
+        setStatus(status, 'Error encrypting PDF: ' + err.message, 'error');
+        console.error(err);
+      }
+      setProgress(progress, 0);
+      protectBtn.disabled = false;
+      validateForm();
+    });
+
+    function encryptStringsIn(obj, key) {
+      if (!obj) return;
+      // PDFDict
+      if (typeof obj.entries === 'function' && typeof obj.set === 'function' && typeof obj.get === 'function') {
+        try {
+          const entries = obj.entries();
+          for (const [name, val] of entries) {
+            if (val && val.constructor && val.constructor.name === 'PDFHexString') {
+              const raw = hexToBytes(val.value);
+              const enc = rc4(key, raw);
+              obj.set(name, PDFLib.PDFHexString.of(toHex(enc)));
+            } else if (val && val.constructor && val.constructor.name === 'PDFString') {
+              const raw = stringToBytes(val.value);
+              const enc = rc4(key, raw);
+              obj.set(name, PDFLib.PDFHexString.of(toHex(enc)));
+            } else if (val && typeof val.entries === 'function') {
+              encryptStringsIn(val, key);
+            } else if (val && typeof val.size === 'function') {
+              encryptStringsIn(val, key);
+            }
+          }
+        } catch(e) {}
+      }
+      // PDFArray
+      if (typeof obj.size === 'function' && typeof obj.get === 'function' && typeof obj.set === 'function') {
+        try {
+          const len = obj.size();
+          for (let i = 0; i < len; i++) {
+            const val = obj.get(i);
+            if (val && val.constructor && val.constructor.name === 'PDFHexString') {
+              const raw = hexToBytes(val.value);
+              const enc = rc4(key, raw);
+              obj.set(i, PDFLib.PDFHexString.of(toHex(enc)));
+            } else if (val && val.constructor && val.constructor.name === 'PDFString') {
+              const raw = stringToBytes(val.value);
+              const enc = rc4(key, raw);
+              obj.set(i, PDFLib.PDFHexString.of(toHex(enc)));
+            } else if (val) {
+              encryptStringsIn(val, key);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+
+    function hexToBytes(hex) {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      return bytes;
+    }
+
+    function stringToBytes(str) {
+      const bytes = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xFF;
+      return bytes;
+    }
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
