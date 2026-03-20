@@ -16,6 +16,8 @@ function renderNav(active) {
       <a href="protect.html"${active==='protect'?' style="color:var(--teal);font-weight:700"':''}>Protect</a>
       <a href="unlock.html"${active==='unlock'?' style="color:var(--teal);font-weight:700"':''}>Unlock</a>
       <a href="watermark.html"${active==='watermark'?' style="color:var(--teal);font-weight:700"':''}>Watermark</a>
+      <a href="page-numbers.html"${active==='page-numbers'?' style="color:var(--teal);font-weight:700"':''}>Page #</a>
+      <a href="sign.html"${active==='sign'?' style="color:var(--teal);font-weight:700"':''}>Sign</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
