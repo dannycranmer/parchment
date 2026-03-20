@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Add Watermark to PDF Online Free — Parchment</title>
+  <meta name="description" content="Add text watermarks to every page of your PDF for free. Customize text, size, color, opacity, and rotation. 100% client-side — your files never leave your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/watermark.html">
+  <meta property="og:title" content="Add Watermark to PDF Online Free — Parchment">
+  <meta property="og:description" content="Add text watermarks to PDF pages for free. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .wm-section{margin-top:1rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+    .wm-section h3{font-size:.95rem;font-weight:700;margin-bottom:.75rem}
+    .wm-row{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem}
+    .wm-row:last-child{margin-bottom:0}
+    .wm-row label{font-size:.9rem;font-weight:500;min-width:90px}
+    .wm-row input[type="text"],.wm-row input[type="number"],.wm-row select{padding:.45rem .65rem;border:1px solid var(--border);border-radius:6px;font-size:.9rem;background:var(--bg)}
+    .wm-row input[type="text"]{flex:1;max-width:350px}
+    .wm-row input[type="number"]{width:80px}
+    .wm-row input[type="color"]{width:40px;height:34px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px}
+    .wm-row input:focus,.wm-row select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,123,111,.15)}
+    .wm-preview-wrap{margin-top:1rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center}
+    .wm-preview-wrap h3{font-size:.9rem;font-weight:600;margin-bottom:.5rem;color:var(--text-muted)}
+    .wm-preview-wrap canvas{max-width:100%;border:1px solid var(--border);border-radius:4px;background:#fff}
+    .opacity-val{font-size:.8rem;color:var(--text-muted);min-width:35px}
+  </style>
+</head>
+<body>
+  <div class="tool-header">
+    <h1>💧 Watermark PDF</h1>
+    <p>Add a text watermark to every page of your PDF</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="wm-section">
+        <h3>Watermark Settings</h3>
+        <div class="wm-row">
+          <label for="wmText">Text</label>
+          <input type="text" id="wmText" value="CONFIDENTIAL" placeholder="Watermark text">
+        </div>
+        <div class="wm-row">
+          <label for="wmSize">Font Size</label>
+          <input type="number" id="wmSize" value="60" min="10" max="200" step="5">
+        </div>
+        <div class="wm-row">
+          <label for="wmColor">Color</label>
+          <input type="color" id="wmColor" value="#c0392b">
+        </div>
+        <div class="wm-row">
+          <label for="wmOpacity">Opacity</label>
+          <input type="range" id="wmOpacity" min="0.02" max="1" step="0.02" value="0.2" style="flex:1;max-width:200px">
+          <span class="opacity-val" id="opacityVal">20%</span>
+        </div>
+        <div class="wm-row">
+          <label for="wmRotation">Rotation</label>
+          <select id="wmRotation">
+            <option value="-45">-45° (diagonal)</option>
+            <option value="-30">-30°</option>
+            <option value="0">0° (horizontal)</option>
+            <option value="30">30°</option>
+            <option value="45">45° (diagonal)</option>
+          </select>
+        </div>
+        <div class="wm-row">
+          <label for="wmPosition">Position</label>
+          <select id="wmPosition">
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="tile">Tile (repeat)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wm-preview-wrap" id="previewWrap" style="display:none">
+        <h3>Preview (Page 1)</h3>
+        <canvas id="previewCanvas"></canvas>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="watermarkBtn">Add Watermark</button>
+        <button class="btn btn-secondary" id="previewBtn">Preview</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('watermark'); renderFooter();
+
+    const dropZone = document.getElementById('dropZone');
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const watermarkBtn = document.getElementById('watermarkBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewCanvas = document.getElementById('previewCanvas');
+
+    const wmText = document.getElementById('wmText');
+    const wmSize = document.getElementById('wmSize');
+    const wmColor = document.getElementById('wmColor');
+    const wmOpacity = document.getElementById('wmOpacity');
+    const opacityVal = document.getElementById('opacityVal');
+    const wmRotation = document.getElementById('wmRotation');
+    const wmPosition = document.getElementById('wmPosition');
+
+    let pdfData = null, pdfFileName = '';
+
+    wmOpacity.addEventListener('input', () => {
+      opacityVal.textContent = Math.round(wmOpacity.value * 100) + '%';
+    });
+
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function reset() {
+      pdfData = null; pdfFileName = '';
+      pdfInfo.style.display = 'none';
+      previewWrap.style.display = 'none';
+      dropZone.style.display = '';
+      setStatus(status, '');
+    }
+    resetBtn.addEventListener('click', reset);
+
+    function hexToRgb(hex) {
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      return { r, g, b };
+    }
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF\u2026');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData);
+        const pageCount = doc.getPageCount();
+        pdfFileName = file.name;
+        fileInfo.innerHTML = '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) +
+          '</div><div class="file-meta">' + formatSize(file.size) + ' \u00b7 ' + pageCount + ' page' + (pageCount !== 1 ? 's' : '') + '</div></div>';
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        previewWrap.style.display = 'none';
+        setStatus(status, '');
+      } catch (err) {
+        if (err.message && (err.message.includes('encrypt') || err.message.includes('password'))) {
+          setStatus(status, 'This PDF is encrypted. Use the Unlock tool first.', 'error');
+        } else {
+          setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+        }
+        pdfData = null;
+      }
+    }
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+
+    function getWmConfig() {
+      return {
+        text: wmText.value || 'WATERMARK',
+        size: parseInt(wmSize.value) || 60,
+        color: hexToRgb(wmColor.value),
+        opacity: parseFloat(wmOpacity.value) || 0.2,
+        rotation: parseInt(wmRotation.value) || -45,
+        position: wmPosition.value || 'center'
+      };
+    }
+
+    function drawWatermarkOnPage(page, cfg, font) {
+      const { width, height } = page.getSize();
+      const radians = (cfg.rotation * Math.PI) / 180;
+      const textWidth = font.widthOfTextAtSize(cfg.text, cfg.size);
+      const color = PDFLib.rgb(cfg.color.r, cfg.color.g, cfg.color.b);
+
+      if (cfg.position === 'tile') {
+        /* Tile watermark across the page */
+        const spacingX = textWidth + 80;
+        const spacingY = cfg.size * 3;
+        for (let y = -height; y < height * 2; y += spacingY) {
+          for (let x = -textWidth; x < width + textWidth; x += spacingX) {
+            page.drawText(cfg.text, {
+              x: x, y: y,
+              size: cfg.size, font: font,
+              color: color, opacity: cfg.opacity,
+              rotate: PDFLib.degrees(cfg.rotation)
+            });
+          }
+        }
+      } else {
+        let x, y;
+        if (cfg.position === 'center') {
+          /* Center the text accounting for rotation */
+          x = (width - textWidth * Math.cos(Math.abs(radians))) / 2;
+          y = (height - textWidth * Math.sin(Math.abs(radians))) / 2;
+        } else if (cfg.position === 'top') {
+          x = (width - textWidth * Math.cos(Math.abs(radians))) / 2;
+          y = height - cfg.size * 2;
+        } else {
+          /* bottom */
+          x = (width - textWidth * Math.cos(Math.abs(radians))) / 2;
+          y = cfg.size * 2;
+        }
+        page.drawText(cfg.text, {
+          x: x, y: y,
+          size: cfg.size, font: font,
+          color: color, opacity: cfg.opacity,
+          rotate: PDFLib.degrees(cfg.rotation)
+        });
+      }
+    }
+
+    /* Preview first page */
+    previewBtn.addEventListener('click', async () => {
+      if (!pdfData) return;
+      const cfg = getWmConfig();
+      if (!cfg.text.trim()) { setStatus(status, 'Please enter watermark text', 'error'); return; }
+
+      setStatus(status, 'Generating preview\u2026');
+      try {
+        /* Render page 1 with PDF.js */
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdfDoc = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+        const page = await pdfDoc.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        previewCanvas.width = viewport.width;
+        previewCanvas.height = viewport.height;
+        const ctx = previewCanvas.getContext('2d');
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+        /* Draw watermark preview on canvas */
+        ctx.save();
+        const scale = viewport.scale;
+        const pageWidth = viewport.width;
+        const pageHeight = viewport.height;
+        ctx.globalAlpha = cfg.opacity;
+        ctx.fillStyle = wmColor.value;
+        ctx.font = (cfg.size * scale) + 'px Helvetica, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const textW = ctx.measureText(cfg.text).width;
+        const rotRad = (cfg.rotation * Math.PI) / 180;
+
+        if (cfg.position === 'tile') {
+          const spacingX = textW + 80 * scale;
+          const spacingY = cfg.size * scale * 3;
+          for (let y = 0; y < pageHeight + spacingY; y += spacingY) {
+            for (let x = 0; x < pageWidth + spacingX; x += spacingX) {
+              ctx.save();
+              ctx.translate(x, y);
+              ctx.rotate(rotRad);
+              ctx.fillText(cfg.text, 0, 0);
+              ctx.restore();
+            }
+          }
+        } else {
+          let cx, cy;
+          if (cfg.position === 'center') {
+            cx = pageWidth / 2;
+            cy = pageHeight / 2;
+          } else if (cfg.position === 'top') {
+            cx = pageWidth / 2;
+            cy = cfg.size * scale * 2;
+          } else {
+            cx = pageWidth / 2;
+            cy = pageHeight - cfg.size * scale * 2;
+          }
+          ctx.translate(cx, cy);
+          ctx.rotate(rotRad);
+          ctx.fillText(cfg.text, 0, 0);
+        }
+        ctx.restore();
+
+        previewWrap.style.display = '';
+        setStatus(status, '');
+        pdfDoc.destroy();
+      } catch (err) {
+        console.error(err);
+        setStatus(status, 'Preview error: ' + err.message, 'error');
+      }
+    });
+
+    /* Apply watermark to all pages */
+    watermarkBtn.addEventListener('click', async () => {
+      if (!pdfData) return;
+      const cfg = getWmConfig();
+      if (!cfg.text.trim()) { setStatus(status, 'Please enter watermark text', 'error'); return; }
+
+      watermarkBtn.disabled = true;
+      setStatus(status, 'Adding watermark\u2026');
+      setProgress(progress, 10);
+
+      try {
+        const doc = await PDFLib.PDFDocument.load(pdfData);
+        const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        const pages = doc.getPages();
+
+        for (let i = 0; i < pages.length; i++) {
+          drawWatermarkOnPage(pages[i], cfg, font);
+          setProgress(progress, 10 + (80 * (i + 1) / pages.length));
+        }
+
+        const outBytes = await doc.save();
+        const outName = pdfFileName.replace(/\.pdf$/i, '') + '-watermarked.pdf';
+        downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), outName);
+
+        setProgress(progress, 100);
+        setStatus(status, 'Watermark added to all ' + pages.length + ' page' + (pages.length !== 1 ? 's' : '') + '!', 'success');
+      } catch (err) {
+        console.error(err);
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+
+      setProgress(progress, 0);
+      watermarkBtn.disabled = false;
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

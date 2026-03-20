@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Remove PDF Password Online Free — Parchment</title>
-  <meta name="description" content="Remove password protection from PDF files for free. Enter the password you know and download an unlocked copy. No upload required — your files stay on your device.">
-  <meta property="og:title" content="Remove PDF Password Online Free — Parchment">
-  <meta property="og:description" content="Unlock password-protected PDFs without uploading your files. 100% private — runs in your browser.">
-  <meta property="og:type" content="website">
+  <meta name="description" content="Remove password protection from any PDF for free. Enter the password you know, get an unlocked PDF. 100% client-side — your files never leave your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="canonical" href="https://dannycranmer.github.io/parchment/unlock.html">
+  <meta property="og:title" content="Remove PDF Password Online Free — Parchment">
+  <meta property="og:description" content="Remove password from PDF for free. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pw-section{margin-top:1rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+    .pw-section label{display:block;font-size:.9rem;font-weight:600;margin-bottom:.3rem;color:var(--text)}
+    .pw-field{display:flex;gap:.5rem;align-items:center}
+    .pw-field input{flex:1;padding:.55rem .75rem;border:1px solid var(--border);border-radius:6px;font-size:.95rem;background:var(--bg)}
+    .pw-field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(42,123,111,.15)}
+    .pw-toggle{background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:.55rem .75rem;cursor:pointer;font-size:.85rem;font-weight:500;white-space:nowrap;transition:background .2s}
+    .pw-toggle:hover{background:#fff}
+    .pw-note{font-size:.85rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5}
+  </style>
 </head>
 <body>
   <div class="tool-header">
@@ -31,29 +41,18 @@
         <div class="file-item" id="fileInfo"></div>
       </div>
 
-      <div class="options">
-        <h3>PDF Password</h3>
-        <div class="option-row">
-          <label for="pdfPassword">Password:</label>
-          <input type="text" id="pdfPassword" placeholder="Enter the PDF password" autocomplete="off">
+      <div class="pw-section">
+        <label for="pw1">PDF Password</label>
+        <div class="pw-field">
+          <input type="password" id="pw1" placeholder="Enter the PDF password" autocomplete="current-password">
+          <button type="button" class="pw-toggle" id="togglePw">Show</button>
         </div>
-        <div class="option-row" style="font-size:.85rem;color:var(--text-muted)">
-          Enter the password used to protect this PDF. The unlocked file will have no password restriction.
-        </div>
+        <div class="pw-note">Enter the password required to open this PDF. The password will be used to decrypt the file locally, then removed.</div>
       </div>
 
       <div class="action-bar">
-        <button class="btn btn-primary" id="unlockBtn">Unlock PDF</button>
+        <button class="btn btn-primary" id="unlockBtn" disabled>Unlock PDF</button>
         <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
-      </div>
-
-      <div id="resultPanel" style="display:none">
-        <div class="file-list" style="margin-top:1rem">
-          <div class="file-item" id="resultInfo"></div>
-        </div>
-        <div class="action-bar">
-          <button class="btn btn-primary" id="downloadBtn">Download Unlocked PDF</button>
-        </div>
       </div>
     </div>
 
@@ -61,150 +60,159 @@
     <div class="status-msg" id="status"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="js/common.js"></script>
   <script>
     renderNav('unlock'); renderFooter();
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    let pdfData = null, resultBlob = null;
+    const dropZone = document.getElementById('dropZone');
     const pdfInfo = document.getElementById('pdfInfo');
     const fileInfo = document.getElementById('fileInfo');
-    const resultPanel = document.getElementById('resultPanel');
-    const resultInfo = document.getElementById('resultInfo');
+    const pw1 = document.getElementById('pw1');
     const unlockBtn = document.getElementById('unlockBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
     const resetBtn = document.getElementById('resetBtn');
     const status = document.getElementById('status');
     const progress = document.getElementById('progress');
-    const dropZone = document.getElementById('dropZone');
-    const passwordInput = document.getElementById('pdfPassword');
 
-    let originalName = 'document.pdf', originalSize = 0;
+    let pdfData = null, pdfFileName = '', isEncrypted = false;
+
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     function reset() {
-      pdfData = null; resultBlob = null;
+      pdfData = null; pdfFileName = ''; isEncrypted = false;
       pdfInfo.style.display = 'none';
-      resultPanel.style.display = 'none';
       dropZone.style.display = '';
-      passwordInput.value = '';
+      pw1.value = '';
+      unlockBtn.disabled = true;
       setStatus(status, '');
     }
-
     resetBtn.addEventListener('click', reset);
+
+    document.getElementById('togglePw').addEventListener('click', function() {
+      const t = pw1.type === 'password' ? 'text' : 'password';
+      pw1.type = t;
+      this.textContent = t === 'password' ? 'Show' : 'Hide';
+    });
+
+    pw1.addEventListener('input', function() {
+      unlockBtn.disabled = !pw1.value;
+    });
 
     async function loadPDF(file) {
       if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
         setStatus(status, 'Please select a PDF file', 'error'); return;
       }
-      setStatus(status, 'Loading PDF…');
+      setStatus(status, 'Loading PDF\u2026');
       try {
         pdfData = new Uint8Array(await file.arrayBuffer());
-        originalName = file.name;
-        originalSize = file.size;
+        pdfFileName = file.name;
 
-        fileInfo.innerHTML = `<div class="file-info">
-          <div class="file-name">${file.name}</div>
-          <div class="file-meta">${formatSize(file.size)}</div>
-        </div>`;
-
-        dropZone.style.display = 'none';
-        pdfInfo.style.display = '';
-        resultPanel.style.display = 'none';
-        resultBlob = null;
-        setStatus(status, '');
-        passwordInput.focus();
+        /* Try to load without password to check if encrypted */
+        try {
+          const doc = await PDFLib.PDFDocument.load(pdfData);
+          const pageCount = doc.getPageCount();
+          fileInfo.innerHTML = '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) +
+            '</div><div class="file-meta">' + formatSize(file.size) + ' \u00b7 ' + pageCount + ' page' + (pageCount !== 1 ? 's' : '') + ' \u00b7 <span style="color:#2ecc71;font-weight:600">Not encrypted</span></div></div>';
+          dropZone.style.display = 'none';
+          pdfInfo.style.display = '';
+          isEncrypted = false;
+          setStatus(status, 'This PDF is not password-protected. No unlocking needed.', 'success');
+        } catch (err) {
+          if (err.message && (err.message.includes('encrypt') || err.message.includes('password'))) {
+            isEncrypted = true;
+            fileInfo.innerHTML = '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) +
+              '</div><div class="file-meta">' + formatSize(file.size) + ' \u00b7 <span style="color:#c0392b;font-weight:600">Password protected</span></div></div>';
+            dropZone.style.display = 'none';
+            pdfInfo.style.display = '';
+            setStatus(status, '');
+            pw1.focus();
+          } else {
+            setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+            pdfData = null;
+          }
+        }
       } catch (err) {
-        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+        setStatus(status, 'Error reading file: ' + err.message, 'error');
+        pdfData = null;
       }
     }
 
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+
+    /* Use PDF.js to decrypt and re-create the PDF via pdf-lib */
     unlockBtn.addEventListener('click', async () => {
-      const password = passwordInput.value;
-      if (!password) {
-        setStatus(status, 'Please enter the PDF password', 'error');
-        passwordInput.focus();
+      const pw = pw1.value;
+      if (!pw) { setStatus(status, 'Please enter the password', 'error'); return; }
+      if (!isEncrypted) {
+        /* Not encrypted — just download as-is */
+        const outName = pdfFileName.replace(/\.pdf$/i, '') + '-unlocked.pdf';
+        downloadBlob(new Blob([pdfData], { type: 'application/pdf' }), outName);
+        setStatus(status, 'PDF downloaded (was not encrypted).', 'success');
         return;
       }
 
       unlockBtn.disabled = true;
-      resultPanel.style.display = 'none';
-      setStatus(status, 'Unlocking PDF…');
+      setStatus(status, 'Decrypting PDF\u2026');
       setProgress(progress, 10);
 
       try {
-        // Use pdf.js to open with the password and re-render all pages
-        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice(), password }).promise;
-        const pageCount = pdf.numPages;
-
+        /* Use PDF.js to open with password and render each page */
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(), password: pw });
+        const pdfDoc = await loadingTask.promise;
+        const pageCount = pdfDoc.numPages;
         setProgress(progress, 20);
 
-        // Create a new unprotected PDF with pdf-lib
+        /* Create new PDF with pdf-lib */
         const newDoc = await PDFLib.PDFDocument.create();
 
         for (let i = 1; i <= pageCount; i++) {
-          const page = await pdf.getPage(i);
-          const vp = page.getViewport({ scale: 2 }); // High quality render
-          const origVp = page.getViewport({ scale: 1 });
+          const page = await pdfDoc.getPage(i);
+          const viewport = page.getViewport({ scale: 2 });
 
+          /* Render page to canvas */
           const canvas = document.createElement('canvas');
-          canvas.width = vp.width;
-          canvas.height = vp.height;
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
           const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-          // Use PNG for lossless quality
-          const pngBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-          const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
-          const img = await newDoc.embedPng(pngBytes);
+          /* Convert canvas to PNG and embed in new PDF */
+          const imgData = canvas.toDataURL('image/jpeg', 0.92);
+          const imgBytes = Uint8Array.from(atob(imgData.split(',')[1]), c => c.charCodeAt(0));
+          const img = await newDoc.embedJpg(imgBytes);
 
-          const newPage = newDoc.addPage([origVp.width, origVp.height]);
-          newPage.drawImage(img, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+          /* Use original page dimensions (in points) */
+          const origViewport = page.getViewport({ scale: 1 });
+          const newPage = newDoc.addPage([origViewport.width, origViewport.height]);
+          newPage.drawImage(img, { x: 0, y: 0, width: origViewport.width, height: origViewport.height });
 
           setProgress(progress, 20 + (70 * i / pageCount));
         }
 
-        const unlockedBytes = await newDoc.save();
-        resultBlob = new Blob([unlockedBytes], { type: 'application/pdf' });
+        const outBytes = await newDoc.save();
+        const outName = pdfFileName.replace(/\.pdf$/i, '') + '-unlocked.pdf';
+        downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), outName);
 
-        resultInfo.innerHTML = `<div class="file-info">
-          <div class="file-name">✅ PDF unlocked successfully</div>
-          <div class="file-meta">${pageCount} page${pageCount !== 1 ? 's' : ''} · ${formatSize(unlockedBytes.length)}</div>
-        </div>`;
-
-        resultPanel.style.display = '';
         setProgress(progress, 100);
-        setStatus(status, `Done! Unlocked ${pageCount} page${pageCount !== 1 ? 's' : ''}`, 'success');
+        setStatus(status, 'PDF unlocked successfully! Password protection has been removed.', 'success');
+        pdfDoc.destroy();
       } catch (err) {
-        if (err.name === 'PasswordException' || (err.message && err.message.includes('password'))) {
+        console.error(err);
+        if (err.message && err.message.includes('Incorrect Password')) {
           setStatus(status, 'Incorrect password. Please try again.', 'error');
         } else {
           setStatus(status, 'Error: ' + err.message, 'error');
         }
       }
+
       setProgress(progress, 0);
       unlockBtn.disabled = false;
-    });
-
-    // Allow pressing Enter in password field to unlock
-    passwordInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') unlockBtn.click();
-    });
-
-    downloadBtn.addEventListener('click', () => {
-      if (resultBlob) {
-        const name = originalName.replace(/\.pdf$/i, '') + '-unlocked.pdf';
-        downloadBlob(resultBlob, name);
-      }
-    });
-
-    setupDropZone(dropZone, {
-      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
-      onFiles: fs => loadPDF(fs[0])
+      unlockBtn.disabled = !pw1.value;
     });
   </script>
   <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
