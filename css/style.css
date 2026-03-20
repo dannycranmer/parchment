@@ -18,6 +18,27 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .nav-links a:hover{color:var(--teal)}
 .nav-bmc{background:var(--amber);color:#fff!important;padding:.4rem .9rem;border-radius:20px;font-weight:600;font-size:.85rem!important;transition:background .2s}
 .nav-bmc:hover{background:var(--teal)!important}
+.nav-toggle{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text);padding:.25rem}
+
+/* Nav More Dropdown */
+.nav-more{position:relative;display:inline-flex}
+.nav-more-btn{background:none;border:none;color:var(--text-muted);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:.9rem;font-weight:500;padding:.25rem .5rem;border-radius:6px;cursor:pointer;transition:color .2s}
+.nav-more-btn:hover{color:var(--teal)}
+.nav-more.has-active .nav-more-btn{color:var(--teal);font-weight:700}
+.nav-more-dropdown{display:none;position:absolute;top:calc(100% + .5rem);right:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:.375rem;min-width:160px;box-shadow:var(--shadow);z-index:200}
+.nav-more:hover .nav-more-dropdown,.nav-more.open .nav-more-dropdown{display:flex;flex-direction:column}
+.nav-more-dropdown a{display:block!important;padding:.5rem .75rem!important;white-space:nowrap}
+
+/* Nav collapse — kick in early so 15 items don't overflow */
+@media(max-width:1200px){
+  .nav-toggle{display:block}
+  .nav-more-btn{display:none}
+  .nav-more{display:contents}
+  .nav-more-dropdown{display:contents!important}
+  .nav-links{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;flex-direction:column;padding:1rem 1.5rem;border-bottom:1px solid var(--border);box-shadow:var(--shadow);gap:.25rem}
+  .nav-links.open{display:flex}
+  .nav-links a{padding:.6rem .5rem;font-size:.95rem}
+}
 
 /* HERO */
 .hero{text-align:center;padding:3.5rem 1.5rem 2.5rem;background:linear-gradient(180deg,#fff 0%,var(--bg) 100%)}
@@ -125,8 +146,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 /* RESPONSIVE */
 @media(max-width:600px){
   .hero h1{font-size:1.7rem}
-  .nav-inner{flex-wrap:wrap}
-  .nav-links{gap:.75rem}
   .tool-container{padding:0 1rem 2rem}
   .option-row{flex-direction:column;align-items:flex-start}
   .option-row label{min-width:auto}

@@ -1,30 +1,66 @@
 /* Parchment — Shared utilities */
 
 function renderNav(active) {
+  const tools = [
+    {href:'merge.html', id:'merge', label:'Merge'},
+    {href:'split.html', id:'split', label:'Split'},
+    {href:'image-to-pdf.html', id:'image-to-pdf', label:'Image to PDF'},
+    {href:'pdf-to-image.html', id:'pdf-to-image', label:'PDF to Image'},
+    {href:'compress.html', id:'compress', label:'Compress'},
+    {href:'rotate.html', id:'rotate', label:'Rotate'},
+    {href:'reorder.html', id:'reorder', label:'Reorder'},
+    {href:'protect.html', id:'protect', label:'Protect'},
+    {href:'unlock.html', id:'unlock', label:'Unlock'},
+    {href:'watermark.html', id:'watermark', label:'Watermark'},
+    {href:'page-numbers.html', id:'page-numbers', label:'Page #'},
+    {href:'extract.html', id:'extract', label:'Extract'},
+    {href:'sign.html', id:'sign', label:'Sign'},
+    {href:'flatten.html', id:'flatten', label:'Flatten'},
+    {href:'pdf-to-text.html', id:'pdf-to-text', label:'PDF to Text'},
+  ];
+  const VISIBLE = 8;
+  const visibleTools = tools.slice(0, VISIBLE);
+  const moreTools = tools.slice(VISIBLE);
+  const activeStyle = 'color:var(--teal);font-weight:700';
+  const link = (t) => `<a href="${t.href}"${active===t.id?` style="${activeStyle}"`:''}>${t.label}</a>`;
+  const hasActiveInMore = moreTools.some(t => t.id === active);
+
   const nav = document.createElement('nav');
   nav.className = 'nav';
   nav.innerHTML = `<div class="nav-inner">
     <a href="index.html" class="nav-logo">📄 <span>Parchment</span></a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
     <div class="nav-links">
-      <a href="merge.html"${active==='merge'?' style="color:var(--teal);font-weight:700"':''}>Merge</a>
-      <a href="split.html"${active==='split'?' style="color:var(--teal);font-weight:700"':''}>Split</a>
-      <a href="image-to-pdf.html"${active==='image-to-pdf'?' style="color:var(--teal);font-weight:700"':''}>Image to PDF</a>
-      <a href="pdf-to-image.html"${active==='pdf-to-image'?' style="color:var(--teal);font-weight:700"':''}>PDF to Image</a>
-      <a href="compress.html"${active==='compress'?' style="color:var(--teal);font-weight:700"':''}>Compress</a>
-      <a href="rotate.html"${active==='rotate'?' style="color:var(--teal);font-weight:700"':''}>Rotate</a>
-      <a href="reorder.html"${active==='reorder'?' style="color:var(--teal);font-weight:700"':''}>Reorder</a>
-      <a href="protect.html"${active==='protect'?' style="color:var(--teal);font-weight:700"':''}>Protect</a>
-      <a href="unlock.html"${active==='unlock'?' style="color:var(--teal);font-weight:700"':''}>Unlock</a>
-      <a href="watermark.html"${active==='watermark'?' style="color:var(--teal);font-weight:700"':''}>Watermark</a>
-      <a href="page-numbers.html"${active==='page-numbers'?' style="color:var(--teal);font-weight:700"':''}>Page #</a>
-      <a href="extract.html"${active==='extract'?' style="color:var(--teal);font-weight:700"':''}>Extract</a>
-      <a href="sign.html"${active==='sign'?' style="color:var(--teal);font-weight:700"':''}>Sign</a>
-      <a href="flatten.html"${active==='flatten'?' style="color:var(--teal);font-weight:700"':''}>Flatten</a>
-      <a href="pdf-to-text.html"${active==='pdf-to-text'?' style="color:var(--teal);font-weight:700"':''}>PDF to Text</a>
+      ${visibleTools.map(link).join('\n      ')}
+      <div class="nav-more${hasActiveInMore?' has-active':''}">
+        <button class="nav-more-btn" aria-expanded="false">More &#9662;</button>
+        <div class="nav-more-dropdown">
+          ${moreTools.map(link).join('\n          ')}
+        </div>
+      </div>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
   document.body.prepend(nav);
+  const toggle = nav.querySelector('.nav-toggle');
+  const links = nav.querySelector('.nav-links');
+  toggle.addEventListener('click', () => {
+    const open = links.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+  });
+  const moreEl = nav.querySelector('.nav-more');
+  const moreBtn = nav.querySelector('.nav-more-btn');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = moreEl.classList.toggle('open');
+      moreBtn.setAttribute('aria-expanded', isOpen);
+    });
+    document.addEventListener('click', () => {
+      moreEl.classList.remove('open');
+      moreBtn.setAttribute('aria-expanded', 'false');
+    });
+  }
 }
 
 function renderFooter() {
