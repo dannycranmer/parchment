@@ -13,7 +13,6 @@ function renderNav(active) {
       <a href="compress.html"${active==='compress'?' style="color:var(--teal);font-weight:700"':''}>Compress</a>
       <a href="rotate.html"${active==='rotate'?' style="color:var(--teal);font-weight:700"':''}>Rotate</a>
       <a href="reorder.html"${active==='reorder'?' style="color:var(--teal);font-weight:700"':''}>Reorder</a>
-      <a href="unlock.html"${active==='unlock'?' style="color:var(--teal);font-weight:700"':''}>Unlock</a>
       <a href="protect.html"${active==='protect'?' style="color:var(--teal);font-weight:700"':''}>Protect</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
