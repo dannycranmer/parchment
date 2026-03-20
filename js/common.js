@@ -12,6 +12,7 @@ function renderNav(active) {
       <a href="pdf-to-image.html"${active==='pdf-to-image'?' style="color:var(--teal);font-weight:700"':''}>PDF to Image</a>
       <a href="compress.html"${active==='compress'?' style="color:var(--teal);font-weight:700"':''}>Compress</a>
       <a href="rotate.html"${active==='rotate'?' style="color:var(--teal);font-weight:700"':''}>Rotate</a>
+      <a href="reorder.html"${active==='reorder'?' style="color:var(--teal);font-weight:700"':''}>Reorder</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;

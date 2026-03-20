@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reorder PDF Pages — Parchment</title>
+  <meta name="description" content="Drag and drop to reorder PDF pages for free. Preview thumbnails, remove unwanted pages. No upload — your files stay on your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/reorder.html">
+  <meta property="og:title" content="Reorder PDF Pages — Parchment">
+  <meta property="og:description" content="Drag and drop to rearrange PDF pages for free. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .reorder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem;margin-top:1rem}
+    .reorder-thumb{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.5rem;text-align:center;position:relative;cursor:grab;user-select:none;transition:transform .15s,box-shadow .15s,opacity .15s}
+    .reorder-thumb:active{cursor:grabbing}
+    .reorder-thumb.dragging{opacity:.4;transform:scale(.95)}
+    .reorder-thumb.drag-over{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal);transform:scale(1.03)}
+    .reorder-thumb canvas{width:100%;display:block;border-radius:4px;pointer-events:none}
+    .reorder-thumb .page-label{font-size:.75rem;color:var(--text-muted);margin-top:.3rem;pointer-events:none}
+    .reorder-thumb .thumb-btns{display:flex;gap:.25rem;justify-content:center;margin-top:.4rem}
+    .reorder-thumb .thumb-btns button{background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:.25rem .5rem;cursor:pointer;font-size:.8rem;transition:background .2s,color .2s}
+    .reorder-thumb .thumb-btns button:hover{background:#dc3545;color:#fff;border-color:#dc3545}
+    .reorder-thumb .thumb-btns .move-btn:hover{background:var(--teal);color:#fff;border-color:var(--teal)}
+    .reorder-thumb .page-num{position:absolute;top:4px;left:4px;background:var(--teal);color:#fff;font-size:.65rem;font-weight:700;padding:1px 5px;border-radius:4px;pointer-events:none}
+    .reorder-info{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:1rem;padding:.75rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:.9rem;color:var(--text-muted)}
+  </style>
+</head>
+<body>
+  <div class="tool-header">
+    <h1>🔀 Reorder PDF Pages</h1>
+    <p>Drag and drop to rearrange pages, remove unwanted ones</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="reorder-info">
+        <span>💡 Drag thumbnails to reorder pages · Click ✕ to remove a page</span>
+      </div>
+
+      <div class="reorder-grid" id="pageGrid"></div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="saveBtn">Save Reordered PDF</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('reorder'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfData = null, pageOrder = []; // array of original 0-based page indices
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const pageGrid = document.getElementById('pageGrid');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+    let fileName = 'reordered.pdf';
+    let originalPageCount = 0;
+
+    function reset() {
+      pdfData = null; pageOrder = []; originalPageCount = 0;
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      pageGrid.innerHTML = '';
+      setStatus(status, '');
+    }
+
+    resetBtn.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        originalPageCount = doc.getPageCount();
+        pageOrder = Array.from({ length: originalPageCount }, (_, i) => i);
+        fileName = file.name.replace(/\.pdf$/i, '') + '-reordered.pdf';
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${originalPageCount} page${originalPageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+
+        await renderThumbnails();
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    // Store rendered canvases by original page index for reuse
+    const canvasCache = new Map();
+
+    async function renderThumbnails() {
+      const maxPreview = Math.min(pageOrder.length, 50);
+      pageGrid.innerHTML = '';
+      setStatus(status, 'Rendering page previews…');
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+
+        for (let i = 0; i < maxPreview; i++) {
+          const origIdx = pageOrder[i];
+          let canvas;
+
+          if (canvasCache.has(origIdx)) {
+            canvas = canvasCache.get(origIdx).cloneNode(false);
+            const srcCanvas = canvasCache.get(origIdx);
+            canvas.width = srcCanvas.width;
+            canvas.height = srcCanvas.height;
+            canvas.getContext('2d').drawImage(srcCanvas, 0, 0);
+          } else {
+            const page = await pdf.getPage(origIdx + 1);
+            const vp = page.getViewport({ scale: 0.4 });
+            canvas = document.createElement('canvas');
+            canvas.width = vp.width; canvas.height = vp.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+            // Cache original
+            const cached = document.createElement('canvas');
+            cached.width = canvas.width; cached.height = canvas.height;
+            cached.getContext('2d').drawImage(canvas, 0, 0);
+            canvasCache.set(origIdx, cached);
+          }
+
+          const thumb = createThumbElement(canvas, origIdx, i);
+          pageGrid.appendChild(thumb);
+        }
+
+        if (pageOrder.length > maxPreview) {
+          const note = document.createElement('div');
+          note.style.cssText = 'grid-column:1/-1;text-align:center;font-size:.85rem;color:var(--text-muted);padding:.5rem';
+          note.textContent = `Showing first ${maxPreview} of ${pageOrder.length} pages.`;
+          pageGrid.appendChild(note);
+        }
+
+        setStatus(status, '');
+      } catch (e) {
+        setStatus(status, 'Could not render previews', 'error');
+      }
+    }
+
+    function createThumbElement(canvas, origIdx, position) {
+      const thumb = document.createElement('div');
+      thumb.className = 'reorder-thumb';
+      thumb.draggable = true;
+      thumb.dataset.position = position;
+
+      const pageNum = document.createElement('div');
+      pageNum.className = 'page-num';
+      pageNum.textContent = origIdx + 1;
+      thumb.appendChild(pageNum);
+
+      thumb.appendChild(canvas);
+
+      const label = document.createElement('div');
+      label.className = 'page-label';
+      label.textContent = 'Page ' + (origIdx + 1);
+      thumb.appendChild(label);
+
+      const btns = document.createElement('div');
+      btns.className = 'thumb-btns';
+
+      const leftBtn = document.createElement('button');
+      leftBtn.className = 'move-btn';
+      leftBtn.textContent = '◀';
+      leftBtn.title = 'Move left';
+      leftBtn.addEventListener('click', (e) => { e.stopPropagation(); movePage(position, -1); });
+
+      const rightBtn = document.createElement('button');
+      rightBtn.className = 'move-btn';
+      rightBtn.textContent = '▶';
+      rightBtn.title = 'Move right';
+      rightBtn.addEventListener('click', (e) => { e.stopPropagation(); movePage(position, 1); });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove page';
+      removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removePage(position); });
+
+      btns.appendChild(leftBtn);
+      btns.appendChild(rightBtn);
+      btns.appendChild(removeBtn);
+      thumb.appendChild(btns);
+
+      // Drag events
+      thumb.addEventListener('dragstart', handleDragStart);
+      thumb.addEventListener('dragend', handleDragEnd);
+      thumb.addEventListener('dragover', handleDragOver);
+      thumb.addEventListener('dragenter', handleDragEnter);
+      thumb.addEventListener('dragleave', handleDragLeave);
+      thumb.addEventListener('drop', handleDrop);
+
+      return thumb;
+    }
+
+    let dragSrcPosition = null;
+
+    function handleDragStart(e) {
+      dragSrcPosition = parseInt(this.dataset.position);
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragSrcPosition);
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      pageGrid.querySelectorAll('.reorder-thumb').forEach(t => t.classList.remove('drag-over'));
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDragEnter(e) {
+      e.preventDefault();
+      this.classList.add('drag-over');
+    }
+
+    function handleDragLeave() {
+      this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      const fromPos = parseInt(e.dataTransfer.getData('text/plain'));
+      const toPos = parseInt(this.dataset.position);
+      if (fromPos === toPos) return;
+
+      // Move page in order array
+      const item = pageOrder.splice(fromPos, 1)[0];
+      pageOrder.splice(toPos, 0, item);
+      rebuildGrid();
+    }
+
+    function movePage(position, delta) {
+      const newPos = position + delta;
+      if (newPos < 0 || newPos >= pageOrder.length) return;
+      const item = pageOrder.splice(position, 1)[0];
+      pageOrder.splice(newPos, 0, item);
+      rebuildGrid();
+    }
+
+    function removePage(position) {
+      if (pageOrder.length <= 1) {
+        setStatus(status, 'Cannot remove the last page', 'error');
+        return;
+      }
+      pageOrder.splice(position, 1);
+      rebuildGrid();
+      setStatus(status, `${pageOrder.length} of ${originalPageCount} pages remaining`);
+    }
+
+    function rebuildGrid() {
+      const maxPreview = Math.min(pageOrder.length, 50);
+      pageGrid.innerHTML = '';
+      for (let i = 0; i < maxPreview; i++) {
+        const origIdx = pageOrder[i];
+        if (canvasCache.has(origIdx)) {
+          const srcCanvas = canvasCache.get(origIdx);
+          const canvas = document.createElement('canvas');
+          canvas.width = srcCanvas.width; canvas.height = srcCanvas.height;
+          canvas.getContext('2d').drawImage(srcCanvas, 0, 0);
+          const thumb = createThumbElement(canvas, origIdx, i);
+          pageGrid.appendChild(thumb);
+        }
+      }
+      if (pageOrder.length > maxPreview) {
+        const note = document.createElement('div');
+        note.style.cssText = 'grid-column:1/-1;text-align:center;font-size:.85rem;color:var(--text-muted);padding:.5rem';
+        note.textContent = `Showing first ${maxPreview} of ${pageOrder.length} pages.`;
+        pageGrid.appendChild(note);
+      }
+    }
+
+    saveBtn.addEventListener('click', async () => {
+      if (pageOrder.length === 0) {
+        setStatus(status, 'No pages to save', 'error'); return;
+      }
+      // Check if anything changed
+      const isUnchanged = pageOrder.length === originalPageCount && pageOrder.every((p, i) => p === i);
+      if (isUnchanged) {
+        setStatus(status, 'No changes made — pages are in original order', 'error'); return;
+      }
+      saveBtn.disabled = true;
+      setStatus(status, 'Building reordered PDF…');
+      setProgress(progress, 10);
+      try {
+        const srcDoc = await PDFLib.PDFDocument.load(pdfData, { ignoreEncryption: true });
+        const newDoc = await PDFLib.PDFDocument.create();
+        for (let i = 0; i < pageOrder.length; i++) {
+          const [copied] = await newDoc.copyPages(srcDoc, [pageOrder[i]]);
+          newDoc.addPage(copied);
+          setProgress(progress, 10 + (80 * (i + 1) / pageOrder.length));
+        }
+        const bytes = await newDoc.save();
+        setProgress(progress, 95);
+        downloadBlob(new Blob([bytes], { type: 'application/pdf' }), fileName);
+        setProgress(progress, 100);
+        const removed = originalPageCount - pageOrder.length;
+        let msg = `Saved ${pageOrder.length}-page PDF`;
+        if (removed > 0) msg += ` (${removed} page${removed !== 1 ? 's' : ''} removed)`;
+        msg += ' — downloading';
+        setStatus(status, msg, 'success');
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      saveBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
