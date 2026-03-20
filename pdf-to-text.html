@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Extract Text from PDF Online Free — Parchment</title>
+  <meta name="description" content="Extract all text from a PDF into a copyable text area. Free, private, and runs entirely in your browser. No upload — your files never leave your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://dannycranmer.github.io/parchment/pdf-to-text.html">
+  <meta property="og:title" content="Extract Text from PDF Online Free — Parchment">
+  <meta property="og:description" content="Extract text from PDF files privately in your browser. No uploads, no accounts, no ads.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .text-output{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none}
+    .text-output textarea{width:100%;min-height:300px;border:1px solid var(--border);border-radius:8px;padding:.75rem;font-family:'Courier New',monospace;font-size:.9rem;color:var(--text);background:var(--bg-alt);resize:vertical;line-height:1.6}
+    .text-output .text-stats{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.85rem;color:var(--text-muted)}
+    .text-output .text-stats span{font-weight:600;color:var(--teal)}
+    .text-actions{display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap}
+    .page-separator{color:var(--text-muted);font-size:.85rem;margin:.5rem 0}
+  </style>
+</head>
+<body>
+  <div class="tool-header">
+    <h1>📝 PDF to Text</h1>
+    <p>Extract all text content from a PDF into a copyable text area</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="extractBtn">Extract Text</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="text-output" id="textOutput">
+      <div class="text-stats" id="textStats"></div>
+      <textarea id="textArea" readonly></textarea>
+      <div class="text-actions">
+        <button class="btn btn-primary" id="copyBtn">Copy to Clipboard</button>
+        <button class="btn btn-secondary" id="downloadBtn">Download as .txt</button>
+        <button class="btn btn-secondary" id="resetBtn2">Extract Another PDF</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('pdf-to-text'); renderFooter();
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfFile = null;
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const extractBtn = document.getElementById('extractBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetBtn2 = document.getElementById('resetBtn2');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const dropZone = document.getElementById('dropZone');
+    const textOutput = document.getElementById('textOutput');
+    const textArea = document.getElementById('textArea');
+    const textStats = document.getElementById('textStats');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    let baseName = 'document';
+
+    function reset() {
+      pdfFile = null;
+      pdfInfo.style.display = 'none';
+      textOutput.style.display = 'none';
+      dropZone.style.display = '';
+      textArea.value = '';
+      setStatus(status, '');
+      setProgress(progress, 0);
+    }
+
+    resetBtn.addEventListener('click', reset);
+    resetBtn2.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfFile = new Uint8Array(await file.arrayBuffer());
+        baseName = file.name.replace(/\.pdf$/i, '');
+        const pdf = await pdfjsLib.getDocument({ data: pdfFile }).promise;
+        const pageCount = pdf.numPages;
+
+        fileInfo.innerHTML = `<div class="file-info">
+          <div class="file-name">${file.name}</div>
+          <div class="file-meta">${formatSize(file.size)} · ${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        textOutput.style.display = 'none';
+        setStatus(status, '');
+      } catch (err) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    extractBtn.addEventListener('click', async () => {
+      if (!pdfFile) return;
+      extractBtn.disabled = true;
+      setStatus(status, 'Extracting text…');
+      setProgress(progress, 5);
+
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: pdfFile }).promise;
+        const totalPages = pdf.numPages;
+        const pageTexts = [];
+
+        for (let i = 1; i <= totalPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map(item => item.str);
+          pageTexts.push(strings.join(' '));
+          setProgress(progress, Math.round((i / totalPages) * 90));
+        }
+
+        const fullText = pageTexts
+          .map((t, i) => `--- Page ${i + 1} ---\n${t.trim()}`)
+          .join('\n\n');
+
+        const charCount = fullText.length;
+        const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length;
+
+        textArea.value = fullText;
+        textStats.innerHTML = `
+          <div>Pages: <span>${totalPages}</span></div>
+          <div>Words: <span>${wordCount.toLocaleString()}</span></div>
+          <div>Characters: <span>${charCount.toLocaleString()}</span></div>
+        `;
+
+        pdfInfo.style.display = 'none';
+        textOutput.style.display = '';
+        setProgress(progress, 100);
+
+        if (wordCount === 0) {
+          setStatus(status, 'No text found — this PDF may contain only images. Try an OCR tool for scanned documents.', 'error');
+        } else {
+          setStatus(status, `Extracted ${wordCount.toLocaleString()} words from ${totalPages} page${totalPages !== 1 ? 's' : ''}`, 'success');
+        }
+      } catch (err) {
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+      setProgress(progress, 0);
+      extractBtn.disabled = false;
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(textArea.value);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+      } catch (e) {
+        textArea.select();
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([textArea.value], { type: 'text/plain' });
+      downloadBlob(blob, baseName + '.txt');
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://dairylea.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

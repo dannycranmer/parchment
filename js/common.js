@@ -20,6 +20,7 @@ function renderNav(active) {
       <a href="extract.html"${active==='extract'?' style="color:var(--teal);font-weight:700"':''}>Extract</a>
       <a href="sign.html"${active==='sign'?' style="color:var(--teal);font-weight:700"':''}>Sign</a>
       <a href="flatten.html"${active==='flatten'?' style="color:var(--teal);font-weight:700"':''}>Flatten</a>
+      <a href="pdf-to-text.html"${active==='pdf-to-text'?' style="color:var(--teal);font-weight:700"':''}>PDF to Text</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
