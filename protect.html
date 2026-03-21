@@ -407,7 +407,7 @@
 
         setProgress(progress, 85);
 
-        const outBytes = await srcDoc.save();
+        const outBytes = await srcDoc.save({ useObjectStreams: false });
         const outName = pdfFileName.replace(/\.pdf$/i, '') + '-protected.pdf';
         downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), outName);
 

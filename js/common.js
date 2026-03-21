@@ -21,7 +21,7 @@ function renderNav(active) {
   const VISIBLE = 8;
   const visibleTools = tools.slice(0, VISIBLE);
   const moreTools = tools.slice(VISIBLE);
-  const activeStyle = 'color:var(--teal);font-weight:700';
+  const activeStyle = 'color:var(--accent);font-weight:700';
   const link = (t) => `<a href="${t.href}"${active===t.id?` style="${activeStyle}"`:''}>${t.label}</a>`;
   const hasActiveInMore = moreTools.some(t => t.id === active);
 
