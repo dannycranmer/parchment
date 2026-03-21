@@ -217,9 +217,9 @@
       } else {
         let x, y;
         if (cfg.position === 'center') {
-          /* Center the text accounting for rotation */
-          x = (width - textWidth * Math.cos(Math.abs(radians))) / 2;
-          y = (height - textWidth * Math.sin(Math.abs(radians))) / 2;
+          /* Center the text midpoint on the page center, accounting for rotation direction */
+          x = (width - textWidth * Math.cos(radians)) / 2;
+          y = (height - textWidth * Math.sin(radians)) / 2;
         } else if (cfg.position === 'top') {
           x = (width - textWidth * Math.cos(Math.abs(radians))) / 2;
           y = height - cfg.size * 2;

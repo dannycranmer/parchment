@@ -70,7 +70,7 @@ function renderFooter() {
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://dannycranmer.github.io/devtoolbox/" target="_blank" rel="noopener">Try DevToolbox</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a>
-    <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source</span>`;
+    <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source · <a href="https://github.com/dannycranmer/parchment" target="_blank" rel="noopener" style="color:inherit">⭐ View on GitHub</a></span>`;
   document.body.appendChild(f);
 }
 
