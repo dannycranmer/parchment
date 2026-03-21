@@ -144,6 +144,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .page-thumb span{font-size:.75rem;color:var(--text-muted);margin-top:.2rem;display:block}
 
 /* RESPONSIVE */
+@media(max-width:768px){
+  .tool-grid{grid-template-columns:1fr}
+  .trust-grid{grid-template-columns:1fr}
+}
 @media(max-width:600px){
   .hero h1{font-size:1.7rem}
   .tool-container{padding:0 1rem 2rem}
