@@ -66,7 +66,7 @@
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    let pdfFile = null;
+    let pdfDoc = null;
     const pdfInfo = document.getElementById('pdfInfo');
     const fileInfo = document.getElementById('fileInfo');
     const extractBtn = document.getElementById('extractBtn');
@@ -83,7 +83,7 @@
     let baseName = 'document';
 
     function reset() {
-      pdfFile = null;
+      if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
       pdfInfo.style.display = 'none';
       textOutput.style.display = 'none';
       dropZone.style.display = '';
@@ -101,10 +101,11 @@
       }
       setStatus(status, 'Loading PDF…');
       try {
-        pdfFile = new Uint8Array(await file.arrayBuffer());
+        const data = new Uint8Array(await file.arrayBuffer());
         baseName = file.name.replace(/\.pdf$/i, '');
-        const pdf = await pdfjsLib.getDocument({ data: pdfFile.slice() }).promise;
-        const pageCount = pdf.numPages;
+        if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+        pdfDoc = await pdfjsLib.getDocument({ data: data }).promise;
+        const pageCount = pdfDoc.numPages;
 
         fileInfo.innerHTML = `<div class="file-info">
           <div class="file-name">${file.name}</div>
@@ -121,14 +122,13 @@
     }
 
     extractBtn.addEventListener('click', async () => {
-      if (!pdfFile) return;
+      if (!pdfDoc) return;
       extractBtn.disabled = true;
       setStatus(status, 'Extracting text…');
       setProgress(progress, 5);
 
       try {
-        const pdf = await pdfjsLib.getDocument({ data: pdfFile.slice() }).promise;
-        const totalPages = pdf.numPages;
+        const totalPages = pdfDoc.numPages;
         const pageTexts = [];
 
         for (let i = 1; i <= totalPages; i++) {
