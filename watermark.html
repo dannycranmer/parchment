@@ -237,7 +237,8 @@
       }
     }
 
-    /* Preview first page */
+    /* Preview first page — apply watermark with pdf-lib then render with PDF.js
+       so the preview is pixel-identical to the output */
     previewBtn.addEventListener('click', async () => {
       if (!pdfData) return;
       const cfg = getWmConfig();
@@ -245,61 +246,23 @@
 
       setStatus(status, 'Generating preview\u2026');
       try {
-        /* Render page 1 with PDF.js */
+        /* Apply watermark to a copy of the PDF using pdf-lib (same as output) */
+        const doc = await PDFLib.PDFDocument.load(pdfData);
+        const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        const firstPage = doc.getPages()[0];
+        drawWatermarkOnPage(firstPage, cfg, font);
+        const watermarkedBytes = await doc.save();
+
+        /* Render watermarked page 1 with PDF.js */
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const pdfDoc = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+        const pdfDoc = await pdfjsLib.getDocument({ data: watermarkedBytes }).promise;
         const page = await pdfDoc.getPage(1);
         const viewport = page.getViewport({ scale: 1.5 });
 
         previewCanvas.width = viewport.width;
         previewCanvas.height = viewport.height;
         const ctx = previewCanvas.getContext('2d');
-
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-        /* Draw watermark preview on canvas */
-        ctx.save();
-        const scale = viewport.scale;
-        const pageWidth = viewport.width;
-        const pageHeight = viewport.height;
-        ctx.globalAlpha = cfg.opacity;
-        ctx.fillStyle = wmColor.value;
-        ctx.font = (cfg.size * scale) + 'px Helvetica, Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const textW = ctx.measureText(cfg.text).width;
-        const rotRad = (cfg.rotation * Math.PI) / 180;
-
-        if (cfg.position === 'tile') {
-          const spacingX = textW + 80 * scale;
-          const spacingY = cfg.size * scale * 3;
-          for (let y = 0; y < pageHeight + spacingY; y += spacingY) {
-            for (let x = 0; x < pageWidth + spacingX; x += spacingX) {
-              ctx.save();
-              ctx.translate(x, y);
-              ctx.rotate(rotRad);
-              ctx.fillText(cfg.text, 0, 0);
-              ctx.restore();
-            }
-          }
-        } else {
-          let cx, cy;
-          if (cfg.position === 'center') {
-            cx = pageWidth / 2;
-            cy = pageHeight / 2;
-          } else if (cfg.position === 'top') {
-            cx = pageWidth / 2;
-            cy = cfg.size * scale * 2;
-          } else {
-            cx = pageWidth / 2;
-            cy = pageHeight - cfg.size * scale * 2;
-          }
-          ctx.translate(cx, cy);
-          ctx.rotate(rotRad);
-          ctx.fillText(cfg.text, 0, 0);
-        }
-        ctx.restore();
 
         previewWrap.style.display = '';
         setStatus(status, '');
