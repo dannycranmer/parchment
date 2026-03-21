@@ -103,7 +103,7 @@
       try {
         pdfFile = new Uint8Array(await file.arrayBuffer());
         baseName = file.name.replace(/\.pdf$/i, '');
-        const pdf = await pdfjsLib.getDocument({ data: pdfFile }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: pdfFile.slice() }).promise;
         const pageCount = pdf.numPages;
 
         fileInfo.innerHTML = `<div class="file-info">
@@ -127,7 +127,7 @@
       setProgress(progress, 5);
 
       try {
-        const pdf = await pdfjsLib.getDocument({ data: pdfFile }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: pdfFile.slice() }).promise;
         const totalPages = pdf.numPages;
         const pageTexts = [];
 
