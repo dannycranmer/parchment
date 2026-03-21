@@ -132,7 +132,7 @@
         const pageTexts = [];
 
         for (let i = 1; i <= totalPages; i++) {
-          const page = await pdf.getPage(i);
+          const page = await pdfDoc.getPage(i);
           const content = await page.getTextContent();
           const strings = content.items.map(item => item.str);
           pageTexts.push(strings.join(' '));
