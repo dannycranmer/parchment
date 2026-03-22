@@ -99,16 +99,18 @@ function renderNav(active) {
       <a href="index.html" class="mobile-nav-logo">📄 Parchment</a>
       <button class="mobile-nav-close" aria-label="Close menu">✕</button>
     </div>
-    <a href="index.html" class="mobile-nav-home">🏠 All Tools</a>
-    ${categories.map(cat => `
-    <div class="mobile-nav-section">
-      <div class="mobile-nav-section-title">${cat.title}</div>
-      <div class="mobile-nav-grid">
-        ${cat.items.map(mobileItem).join('\n        ')}
-      </div>
-    </div>`).join('')}
-    <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
-    <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>`;
+    <div class="mobile-nav-scroll">
+      <a href="index.html" class="mobile-nav-home">🏠 All Tools</a>
+      ${categories.map(cat => `
+      <div class="mobile-nav-section">
+        <div class="mobile-nav-section-title">${cat.title}</div>
+        <div class="mobile-nav-grid">
+          ${cat.items.map(mobileItem).join('\n          ')}
+        </div>
+      </div>`).join('')}
+      <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
+      <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>
+    </div>`;
   document.body.insertBefore(mobileNav, overlay.nextSibling);
 
   /* Hamburger toggle logic */

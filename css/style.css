@@ -60,7 +60,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .nav-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:199;background:rgba(26,26,46,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .35s ease}
 .nav-overlay.open{opacity:1;pointer-events:auto}
 
-.mobile-nav{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;z-index:200;background:linear-gradient(160deg,#FFFBF5 0%,#FAF9F6 40%,#FFF8F0 100%);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;opacity:0;visibility:hidden;transform:scale(.95);transition:opacity .3s ease,transform .35s cubic-bezier(.34,1.56,.64,1),visibility 0s .35s;padding:0 0 2rem;display:flex;flex-direction:column}
+.mobile-nav{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;z-index:200;background:linear-gradient(160deg,#FFFBF5 0%,#FAF9F6 40%,#FFF8F0 100%);overflow:hidden;opacity:0;visibility:hidden;transform:scale(.95);transition:opacity .3s ease,transform .35s cubic-bezier(.34,1.56,.64,1),visibility 0s .35s;padding:0;display:flex;flex-direction:column}
+.mobile-nav-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 0 2rem}
 .mobile-nav.open{opacity:1;visibility:visible;transform:scale(1);transition:opacity .3s ease,transform .35s cubic-bezier(.34,1.56,.64,1),visibility 0s 0s}
 
 /* Subtle warm decorative blobs — contained within viewport */
