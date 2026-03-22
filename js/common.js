@@ -68,7 +68,7 @@ function renderFooter() {
   f.className = 'footer';
   f.innerHTML = `🔒 Your files never leave your device &nbsp;·&nbsp;
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
-    Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevToolbox</a> &nbsp;·&nbsp;
+    Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevBrew</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a> &nbsp;·&nbsp;
     <a href="compare.html">Compare PDF Editors</a> &nbsp;·&nbsp;
     <a href="best-pdf-editor.html">Best PDF Editor 2026</a>
