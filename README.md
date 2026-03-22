@@ -4,7 +4,7 @@
 
 Parchment is a collection of free PDF tools that run entirely in your browser. No uploads, no servers, no accounts — just fast, private document processing.
 
-🔗 **Live site:** [dannycranmer.github.io/parchment](https://dannycranmer.github.io/parchment/)
+🔗 **Live site:** [parchpdf.com](https://parchpdf.com/)
 
 ## Tools
 
