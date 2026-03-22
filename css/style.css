@@ -22,7 +22,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-he
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
 /* NAV */
-.nav{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border-light);padding:.7rem 1.5rem;position:sticky;top:0;z-index:100;transition:box-shadow .3s;width:100%;overflow-x:hidden}
+.nav{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border-light);padding:.7rem 1.5rem;position:sticky;top:0;z-index:100;transition:box-shadow .3s;width:100%}
 .nav-inner{max-width:var(--max-w);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .nav-logo{font-family:var(--font-display);font-size:1.35rem;font-weight:400;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:.5rem;letter-spacing:-.01em}
 .nav-logo span{color:var(--accent)}
