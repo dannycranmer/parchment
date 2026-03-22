@@ -29,7 +29,7 @@ function renderNav(active) {
   nav.className = 'nav';
   nav.innerHTML = `<div class="nav-inner">
     <a href="index.html" class="nav-logo">📄 <span>Parchment</span></a>
-    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <button class="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
     <div class="nav-links">
       ${visibleTools.map(link).join('\n      ')}
       <div class="nav-more${hasActiveInMore?' has-active':''}">
@@ -42,12 +42,8 @@ function renderNav(active) {
     </div>
   </div>`;
   document.body.prepend(nav);
-  const toggle = nav.querySelector('.nav-toggle');
-  const links = nav.querySelector('.nav-links');
-  toggle.addEventListener('click', () => {
-    const open = links.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', open);
-  });
+
+  /* Desktop More dropdown */
   const moreEl = nav.querySelector('.nav-more');
   const moreBtn = nav.querySelector('.nav-more-btn');
   if (moreBtn) {
@@ -61,6 +57,86 @@ function renderNav(active) {
       moreBtn.setAttribute('aria-expanded', 'false');
     });
   }
+
+  /* Mobile nav — full-screen categorized takeover */
+  const categories = [
+    { title: '📑 Organize', items: [
+      {href:'merge.html', id:'merge', icon:'📑', label:'Merge'},
+      {href:'split.html', id:'split', icon:'✂️', label:'Split'},
+      {href:'extract.html', id:'extract', icon:'📄', label:'Extract'},
+      {href:'reorder.html', id:'reorder', icon:'🔀', label:'Reorder'},
+      {href:'rotate.html', id:'rotate', icon:'🔄', label:'Rotate'},
+    ]},
+    { title: '🔄 Convert', items: [
+      {href:'image-to-pdf.html', id:'image-to-pdf', icon:'🖼️', label:'Image to PDF'},
+      {href:'pdf-to-image.html', id:'pdf-to-image', icon:'📷', label:'PDF to Image'},
+      {href:'pdf-to-text.html', id:'pdf-to-text', icon:'📝', label:'PDF to Text'},
+      {href:'compress.html', id:'compress', icon:'📦', label:'Compress'},
+    ]},
+    { title: '✏️ Edit', items: [
+      {href:'sign.html', id:'sign', icon:'✍️', label:'Sign'},
+      {href:'watermark.html', id:'watermark', icon:'💧', label:'Watermark'},
+      {href:'page-numbers.html', id:'page-numbers', icon:'🔢', label:'Page Numbers'},
+      {href:'flatten.html', id:'flatten', icon:'📋', label:'Flatten'},
+    ]},
+    { title: '🔐 Security', items: [
+      {href:'protect.html', id:'protect', icon:'🔒', label:'Protect'},
+      {href:'unlock.html', id:'unlock', icon:'🔓', label:'Unlock'},
+    ]},
+  ];
+
+  const mobileItem = (t) => `<a href="${t.href}" class="mobile-nav-item${active===t.id?' active':''}"><span class="mobile-nav-item-icon">${t.icon}</span><span class="mobile-nav-item-label">${t.label}</span></a>`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'nav-overlay';
+  document.body.insertBefore(overlay, nav.nextSibling);
+
+  const mobileNav = document.createElement('nav');
+  mobileNav.className = 'mobile-nav';
+  mobileNav.setAttribute('aria-label', 'PDF tool navigation');
+  mobileNav.innerHTML = `
+    <div class="mobile-nav-header">
+      <a href="index.html" class="mobile-nav-logo">📄 Parchment</a>
+      <button class="mobile-nav-close" aria-label="Close menu">✕</button>
+    </div>
+    <a href="index.html" class="mobile-nav-home">🏠 All Tools</a>
+    ${categories.map(cat => `
+    <div class="mobile-nav-section">
+      <div class="mobile-nav-section-title">${cat.title}</div>
+      <div class="mobile-nav-grid">
+        ${cat.items.map(mobileItem).join('\n        ')}
+      </div>
+    </div>`).join('')}
+    <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
+    <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>`;
+  document.body.insertBefore(mobileNav, overlay.nextSibling);
+
+  /* Hamburger toggle logic */
+  const hamburger = nav.querySelector('.hamburger');
+  let isOpen = false;
+
+  function openMobileNav() {
+    if (isOpen) return;
+    isOpen = true;
+    hamburger.classList.add('active');
+    mobileNav.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMobileNav() {
+    if (!isOpen) return;
+    isOpen = false;
+    hamburger.classList.remove('active');
+    mobileNav.classList.remove('open');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  hamburger.addEventListener('click', () => isOpen ? closeMobileNav() : openMobileNav());
+  overlay.addEventListener('click', closeMobileNav);
+  mobileNav.querySelector('.mobile-nav-close').addEventListener('click', closeMobileNav);
+  mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) closeMobileNav(); });
 }
 
 function renderFooter() {
