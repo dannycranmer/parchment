@@ -38,6 +38,7 @@ function renderNav(active) {
           ${moreTools.map(link).join('\n          ')}
         </div>
       </div>
+      <a href="best-pdf-editor.html" style="color:#2dd4bf!important;font-weight:700!important;font-size:.82rem!important">Compare PDF Editors →</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
@@ -108,6 +109,7 @@ function renderNav(active) {
           ${cat.items.map(mobileItem).join('\n          ')}
         </div>
       </div>`).join('')}
+      <a href="best-pdf-editor.html" style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin:1rem 1rem 0;padding:.85rem 1rem;border-radius:14px;text-decoration:none;color:#2dd4bf;font-weight:700;font-size:.92rem;background:rgba(45,212,191,.1);border:2px solid rgba(45,212,191,.25);font-family:var(--font-body)">📊 Compare PDF Editors</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
       <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>
     </div>`;
@@ -144,7 +146,8 @@ function renderNav(active) {
 function renderFooter() {
   const f = document.createElement('footer');
   f.className = 'footer';
-  f.innerHTML = `🔒 Your files never leave your device &nbsp;·&nbsp;
+  f.innerHTML = `<div style="margin-bottom:.75rem"><a href="best-pdf-editor.html" style="color:#2dd4bf;font-size:1.05rem;font-weight:600;text-decoration:none">Looking for a full PDF editor? See our honest comparison of the best PDF editors in 2026 →</a></div>
+    🔒 Your files never leave your device &nbsp;·&nbsp;
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevBrew</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a> &nbsp;·&nbsp;
