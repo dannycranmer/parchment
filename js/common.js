@@ -151,8 +151,7 @@ function renderFooter() {
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevBrew</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a> &nbsp;·&nbsp;
-    <a href="compare.html">Compare PDF Editors</a> &nbsp;·&nbsp;
-    <a href="best-pdf-editor.html">Best PDF Editor 2026</a>
+    <a href="best-pdf-editor.html">Compare PDF Editors — Best of 2026</a>
     <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source · <a href="https://github.com/dannycranmer/parchment" target="_blank" rel="noopener" style="color:inherit">⭐ View on GitHub</a></span>`;
   document.body.appendChild(f);
 }
