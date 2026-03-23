@@ -7,9 +7,7 @@ function renderNav(active) {
     {href:'image-to-pdf.html', id:'image-to-pdf', label:'Image to PDF'},
     {href:'pdf-to-image.html', id:'pdf-to-image', label:'PDF to Image'},
     {href:'compress.html', id:'compress', label:'Compress'},
-    {href:'rotate.html', id:'rotate', label:'Rotate'},
     {href:'reorder.html', id:'reorder', label:'Reorder'},
-    {href:'protect.html', id:'protect', label:'Protect'},
     {href:'unlock.html', id:'unlock', label:'Unlock'},
     {href:'watermark.html', id:'watermark', label:'Watermark'},
     {href:'page-numbers.html', id:'page-numbers', label:'Page #'},
@@ -17,6 +15,8 @@ function renderNav(active) {
     {href:'sign.html', id:'sign', label:'Sign'},
     {href:'flatten.html', id:'flatten', label:'Flatten'},
     {href:'pdf-to-text.html', id:'pdf-to-text', label:'PDF to Text'},
+    {href:'protect.html', id:'protect', label:'Protect'},
+    {href:'rotate.html', id:'rotate', label:'Rotate'},
   ];
   const VISIBLE = 8;
   const visibleTools = tools.slice(0, VISIBLE);
@@ -38,7 +38,6 @@ function renderNav(active) {
           ${moreTools.map(link).join('\n          ')}
         </div>
       </div>
-      <a href="best-pdf-editor.html" style="color:#2dd4bf!important;font-weight:700!important;font-size:.82rem!important">Compare PDF Editors →</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="nav-bmc">☕ Buy me a coffee</a>
     </div>
   </div>`;
@@ -109,7 +108,6 @@ function renderNav(active) {
           ${cat.items.map(mobileItem).join('\n          ')}
         </div>
       </div>`).join('')}
-      <a href="best-pdf-editor.html" style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin:1rem 1rem 0;padding:.85rem 1rem;border-radius:14px;text-decoration:none;color:#2dd4bf;font-weight:700;font-size:.92rem;background:rgba(45,212,191,.1);border:2px solid rgba(45,212,191,.25);font-family:var(--font-body)">📊 Compare PDF Editors</a>
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
       <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>
     </div>`;
