@@ -29,7 +29,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .nav-links{display:flex;gap:.2rem;align-items:center;flex-wrap:wrap}
 .nav-links a{color:var(--text-muted);text-decoration:none;font-size:.82rem;font-weight:600;padding:.4rem .65rem;border-radius:var(--radius-sm);transition:all .2s;letter-spacing:.01em}
 .nav-links a:hover{color:var(--text);background:var(--bg-alt)}
-.nav-bmc{background:var(--text)!important;color:#fff!important;padding:.45rem 1rem!important;border-radius:24px!important;font-weight:700!important;font-size:.8rem!important;transition:all .2s!important;letter-spacing:.02em}
+.nav-bmc{background:var(--text)!important;color:#fff!important;padding:.45rem 1rem!important;border-radius:24px!important;font-weight:700!important;font-size:.8rem!important;transition:all .2s!important;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
 .nav-bmc:hover{background:var(--accent)!important;transform:translateY(-1px)}
 /* Hamburger button — hidden on desktop, shown on mobile */
 .hamburger{display:none;background:none;border:none;cursor:pointer;padding:.6rem;z-index:301;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
