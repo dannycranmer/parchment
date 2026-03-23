@@ -348,7 +348,8 @@
             if (cn === 'PDFHexString') {
               obj.set(name, PDFLib.PDFHexString.of(toHex(rc4(key, hexToBytes(val.value)))));
             } else if (cn === 'PDFString') {
-              obj.set(name, PDFLib.PDFHexString.of(toHex(rc4(key, stringToBytes(val.value)))));
+              const raw = typeof val.asBytes === 'function' ? val.asBytes() : stringToBytes(val.value);
+              obj.set(name, PDFLib.PDFHexString.of(toHex(rc4(key, raw))));
             } else {
               encryptStringsIn(val, key);
             }
@@ -366,7 +367,8 @@
             if (cn === 'PDFHexString') {
               obj.set(i, PDFLib.PDFHexString.of(toHex(rc4(key, hexToBytes(val.value)))));
             } else if (cn === 'PDFString') {
-              obj.set(i, PDFLib.PDFHexString.of(toHex(rc4(key, stringToBytes(val.value)))));
+              const raw = typeof val.asBytes === 'function' ? val.asBytes() : stringToBytes(val.value);
+              obj.set(i, PDFLib.PDFHexString.of(toHex(rc4(key, raw))));
             } else {
               encryptStringsIn(val, key);
             }
