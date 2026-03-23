@@ -151,7 +151,6 @@ function renderFooter() {
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevBrew</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a> &nbsp;·&nbsp;
-    Kids learning? <a href="https://dannycranmer.github.io/eduplay/" target="_blank" rel="noopener">Try EduPlay</a> &nbsp;·&nbsp;
     <a href="best-pdf-editor.html">Compare PDF Editors — Best of 2026</a>
     <br><span style="font-size:.8rem;color:var(--text-muted)">Built by Hustle · Free &amp; open source · <a href="https://github.com/dannycranmer/parchment" target="_blank" rel="noopener" style="color:inherit">⭐ View on GitHub</a></span>`;
   document.body.appendChild(f);
@@ -201,4 +200,23 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showPostActionNudge();
+}
+
+/* Post-action conversion nudge — subtle link to comparison page after tool use */
+function showPostActionNudge() {
+  if (document.querySelector('.post-action-nudge')) return;
+  /* Don't show on comparison pages themselves */
+  const path = window.location.pathname;
+  if (path.includes('best-pdf-editor') || path.includes('compare') || path.includes('index')) return;
+
+  const nudge = document.createElement('div');
+  nudge.className = 'post-action-nudge';
+  nudge.style.cssText = 'max-width:600px;margin:1rem auto;padding:.75rem 1rem;background:rgba(42,123,111,.06);border:1px solid rgba(42,123,111,.15);border-radius:10px;text-align:center;font-size:.85rem;color:var(--text-muted);animation:fadeUp .4s ease';
+  nudge.innerHTML = 'Need more PDF power? <a href="best-pdf-editor.html" style="color:var(--teal);font-weight:600;text-decoration:none">See how Parchment compares to paid editors &rarr;</a>';
+
+  /* Insert after the main action area */
+  const statusEl = document.querySelector('.status-msg');
+  const target = statusEl ? statusEl.parentElement : document.querySelector('.tool-section') || document.querySelector('.article-body');
+  if (target) target.appendChild(nudge);
 }
