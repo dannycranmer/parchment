@@ -201,6 +201,17 @@ function getUsageCount() {
   return parseInt(localStorage.getItem('parchment_uses') || '0', 10);
 }
 
+/* Files processed counter */
+function trackFilesProcessed(n) {
+  const count = parseInt(localStorage.getItem('parchment_files_processed') || '0', 10) + (n || 1);
+  localStorage.setItem('parchment_files_processed', count);
+  return count;
+}
+
+function getFilesProcessed() {
+  return parseInt(localStorage.getItem('parchment_files_processed') || '0', 10);
+}
+
 /* Download helper */
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -210,6 +221,7 @@ function downloadBlob(blob, filename) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   trackUsage();
+  trackFilesProcessed(1);
   showPostActionNudge();
   showPostActionCTA();
 }
