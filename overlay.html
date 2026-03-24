@@ -42,9 +42,23 @@
     .page-canvas-wrap{position:relative;display:inline-block;margin:0 auto;user-select:none}
     .page-canvas-wrap canvas{display:block;max-width:100%;border:1px solid var(--border);border-radius:4px;background:#fff}
     .img-overlay{position:absolute;border:2px dashed var(--accent);background:rgba(214,64,69,.03);cursor:move;display:none}
-    .img-overlay img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+    .img-overlay img{width:100%;height:100%;object-fit:fill;pointer-events:none}
     .img-overlay .img-remove{position:absolute;top:-10px;right:-10px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;z-index:5}
+    .img-overlay .img-crop-btn{position:absolute;top:-10px;right:18px;background:var(--cta);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;z-index:5}
+    .img-overlay .img-crop-btn:hover{background:var(--accent)}
     .img-overlay .img-resize{position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:nwse-resize;z-index:5}
+    .img-overlay.crop-mode{border-color:var(--cta);border-style:solid;cursor:default}
+    .img-overlay.crop-mode img{pointer-events:none}
+    .img-overlay .crop-edge{position:absolute;background:var(--cta);z-index:6;display:none}
+    .img-overlay.crop-mode .crop-edge{display:block}
+    .img-overlay .crop-edge-n,.img-overlay .crop-edge-s{left:0;right:0;height:4px;cursor:ns-resize}
+    .img-overlay .crop-edge-n{top:0}
+    .img-overlay .crop-edge-s{bottom:0}
+    .img-overlay .crop-edge-w,.img-overlay .crop-edge-e{top:0;bottom:0;width:4px;cursor:ew-resize}
+    .img-overlay .crop-edge-w{left:0}
+    .img-overlay .crop-edge-e{right:0}
+    .img-overlay .crop-apply{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);background:var(--cta);color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:.75rem;cursor:pointer;white-space:nowrap;z-index:6;display:none}
+    .img-overlay.crop-mode .crop-apply{display:block}
     .placed-images{margin-top:.75rem}
     .placed-images .img-badge{display:inline-flex;align-items:center;gap:.4rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.8rem;margin:.2rem}
     .placed-images .img-badge button{background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:.9rem}
@@ -548,6 +562,31 @@
       });
       overlay.appendChild(removeBtn);
 
+      /* Crop button on overlay */
+      const cropBtn = document.createElement('button');
+      cropBtn.className = 'img-crop-btn';
+      cropBtn.textContent = '✂';
+      cropBtn.title = 'Crop image';
+      cropBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        enterOverlayCropMode(p, overlay);
+      });
+      overlay.appendChild(cropBtn);
+
+      /* Crop edge handles (hidden until crop mode) */
+      ['n','s','e','w'].forEach(edge => {
+        const edgeEl = document.createElement('div');
+        edgeEl.className = 'crop-edge crop-edge-' + edge;
+        edgeEl.dataset.cropEdge = edge;
+        overlay.appendChild(edgeEl);
+      });
+
+      /* Crop apply button (hidden until crop mode) */
+      const cropApply = document.createElement('button');
+      cropApply.className = 'crop-apply';
+      cropApply.textContent = 'Apply Crop';
+      overlay.appendChild(cropApply);
+
       const resizeHandle = document.createElement('div');
       resizeHandle.className = 'img-resize';
       overlay.appendChild(resizeHandle);
@@ -564,7 +603,7 @@
       }
 
       overlay.addEventListener('mousedown', (e) => {
-        if (e.target === resizeHandle || e.target === removeBtn) return;
+        if (e.target === resizeHandle || e.target === removeBtn || e.target === cropBtn || overlay.classList.contains('crop-mode') || e.target.classList.contains('crop-edge') || e.target === cropApply) return;
         e.preventDefault();
         const onMove = startDrag(e.clientX, e.clientY);
         const handler = (me) => onMove(me.clientX, me.clientY);
@@ -574,7 +613,7 @@
       });
 
       overlay.addEventListener('touchstart', (e) => {
-        if (e.target === resizeHandle || e.target === removeBtn) return;
+        if (e.target === resizeHandle || e.target === removeBtn || e.target === cropBtn || overlay.classList.contains('crop-mode') || e.target.classList.contains('crop-edge') || e.target === cropApply) return;
         e.preventDefault();
         const t = e.touches[0];
         const onMove = startDrag(t.clientX, t.clientY);
@@ -615,7 +654,171 @@
         document.addEventListener('touchend', onEnd);
       }, { passive: false });
 
+      /* Inline crop: drag edges inward to crop */
+      let inlineCrop = { top: 0, bottom: 0, left: 0, right: 0 }; /* insets in display px */
+
+      function setupCropEdgeDrag(edgeEl, edge) {
+        function startEdgeDrag(startPos) {
+          const startInset = { ...inlineCrop };
+          const overlayW = overlay.offsetWidth;
+          const overlayH = overlay.offsetHeight;
+          return (pos) => {
+            const MIN_SIZE = 20;
+            if (edge === 'n') {
+              inlineCrop.top = Math.max(0, Math.min(startInset.top + (pos.y - startPos.y), overlayH - inlineCrop.bottom - MIN_SIZE));
+            } else if (edge === 's') {
+              inlineCrop.bottom = Math.max(0, Math.min(startInset.bottom - (pos.y - startPos.y), overlayH - inlineCrop.top - MIN_SIZE));
+            } else if (edge === 'w') {
+              inlineCrop.left = Math.max(0, Math.min(startInset.left + (pos.x - startPos.x), overlayW - inlineCrop.right - MIN_SIZE));
+            } else if (edge === 'e') {
+              inlineCrop.right = Math.max(0, Math.min(startInset.right - (pos.x - startPos.x), overlayW - inlineCrop.left - MIN_SIZE));
+            }
+            applyCropInsets(overlay, img, inlineCrop);
+          };
+        }
+
+        edgeEl.addEventListener('mousedown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const onMove = startEdgeDrag({ x: e.clientX, y: e.clientY });
+          const handler = (me) => onMove({ x: me.clientX, y: me.clientY });
+          const onUp = () => { document.removeEventListener('mousemove', handler); document.removeEventListener('mouseup', onUp); };
+          document.addEventListener('mousemove', handler);
+          document.addEventListener('mouseup', onUp);
+        });
+        edgeEl.addEventListener('touchstart', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const t = e.touches[0];
+          const onMove = startEdgeDrag({ x: t.clientX, y: t.clientY });
+          const handler = (me) => { me.preventDefault(); const t2 = me.touches[0]; onMove({ x: t2.clientX, y: t2.clientY }); };
+          const onEnd = () => { document.removeEventListener('touchmove', handler); document.removeEventListener('touchend', onEnd); };
+          document.addEventListener('touchmove', handler, { passive: false });
+          document.addEventListener('touchend', onEnd);
+        }, { passive: false });
+      }
+
+      overlay.querySelectorAll('.crop-edge').forEach(edgeEl => {
+        setupCropEdgeDrag(edgeEl, edgeEl.dataset.cropEdge);
+      });
+
+      /* Apply crop button: actually crop the image data */
+      cropApply.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (inlineCrop.top === 0 && inlineCrop.bottom === 0 && inlineCrop.left === 0 && inlineCrop.right === 0) {
+          overlay.classList.remove('crop-mode');
+          return;
+        }
+        applyInlineCrop(p, overlay, img, inlineCrop);
+        inlineCrop = { top: 0, bottom: 0, left: 0, right: 0 };
+        overlay.classList.remove('crop-mode');
+      });
+
       pageWrap.appendChild(overlay);
+    }
+
+    /* Enter inline crop mode on an overlay */
+    function enterOverlayCropMode(p, overlay) {
+      /* Exit any other overlays in crop mode */
+      pageWrap.querySelectorAll('.img-overlay.crop-mode').forEach(el => el.classList.remove('crop-mode'));
+      overlay.classList.add('crop-mode');
+    }
+
+    /* Visual feedback: dim cropped edges via clip-path on the img */
+    function applyCropInsets(overlay, img, insets) {
+      const w = overlay.offsetWidth;
+      const h = overlay.offsetHeight;
+      /* Use clip-path to show only the cropped region */
+      const left = insets.left;
+      const top = insets.top;
+      const right = w - insets.right;
+      const bottom = h - insets.bottom;
+      img.style.clipPath = 'polygon(' + left + 'px ' + top + 'px, ' + right + 'px ' + top + 'px, ' + right + 'px ' + bottom + 'px, ' + left + 'px ' + bottom + 'px)';
+
+      /* Position crop edge handles */
+      const edgeN = overlay.querySelector('.crop-edge-n');
+      const edgeS = overlay.querySelector('.crop-edge-s');
+      const edgeW = overlay.querySelector('.crop-edge-w');
+      const edgeE = overlay.querySelector('.crop-edge-e');
+      if (edgeN) { edgeN.style.top = insets.top + 'px'; edgeN.style.left = insets.left + 'px'; edgeN.style.right = insets.right + 'px'; }
+      if (edgeS) { edgeS.style.bottom = insets.bottom + 'px'; edgeS.style.left = insets.left + 'px'; edgeS.style.right = insets.right + 'px'; }
+      if (edgeW) { edgeW.style.left = insets.left + 'px'; edgeW.style.top = insets.top + 'px'; edgeW.style.bottom = insets.bottom + 'px'; }
+      if (edgeE) { edgeE.style.right = insets.right + 'px'; edgeE.style.top = insets.top + 'px'; edgeE.style.bottom = insets.bottom + 'px'; }
+    }
+
+    /* Apply inline crop: crop the image data URL and resize the overlay */
+    function applyInlineCrop(p, overlay, imgEl, insets) {
+      const overlayW = overlay.offsetWidth;
+      const overlayH = overlay.offsetHeight;
+      const entry = uploadedImages.find(i => i.id === p.imageId);
+      if (!entry) return;
+
+      /* Calculate crop in original image pixel coords */
+      const scaleX = entry.width / overlayW;
+      const scaleY = entry.height / overlayH;
+      const sx = Math.round(insets.left * scaleX);
+      const sy = Math.round(insets.top * scaleY);
+      const sw = Math.round((overlayW - insets.left - insets.right) * scaleX);
+      const sh = Math.round((overlayH - insets.top - insets.bottom) * scaleY);
+
+      if (sw < 1 || sh < 1) return;
+
+      const srcImg = new Image();
+      srcImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = sw;
+        canvas.height = sh;
+        canvas.getContext('2d').drawImage(srcImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        const fmt = entry.dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const newUrl = canvas.toDataURL(fmt, 0.95);
+
+        /* Update the uploaded image entry */
+        entry.dataUrl = newUrl;
+        entry.width = sw;
+        entry.height = sh;
+
+        /* Update this placement — shrink overlay to cropped region */
+        const canvasRect = pageCanvas.getBoundingClientRect();
+        const displayScaleX = pageCanvas.width / canvasRect.width;
+        const displayScaleY = pageCanvas.height / canvasRect.height;
+
+        /* New overlay position/size in display coords */
+        const newLeft = overlay.offsetLeft + insets.left;
+        const newTop = overlay.offsetTop + insets.top;
+        const newW = overlayW - insets.left - insets.right;
+        const newH = overlayH - insets.top - insets.bottom;
+
+        /* Convert to canvas coords */
+        const wrapRect = pageWrap.getBoundingClientRect();
+        const offsetXWrap = canvasRect.left - wrapRect.left;
+        const offsetYWrap = canvasRect.top - wrapRect.top;
+
+        p.canvasX = (newLeft - offsetXWrap) * displayScaleX;
+        p.canvasY = (newTop - offsetYWrap) * displayScaleY;
+        p.canvasW = newW * displayScaleX;
+        p.canvasH = newH * displayScaleY;
+        p.pdfX = p.canvasX / pageScale;
+        p.pdfY = pdfPageHeight - (p.canvasY / pageScale) - (p.canvasH / pageScale);
+        p.pdfW = p.canvasW / pageScale;
+        p.pdfH = p.canvasH / pageScale;
+        p.dataUrl = newUrl;
+
+        /* Also update all other placements of the same image */
+        placements.filter(pl => pl.imageId === entry.id && pl.id !== p.id).forEach(pl => {
+          const newAspect = sw / sh;
+          pl.dataUrl = newUrl;
+          const oldCenterY = pl.canvasY + pl.canvasH / 2;
+          pl.canvasH = pl.canvasW / newAspect;
+          pl.canvasY = oldCenterY - pl.canvasH / 2;
+          pl.pdfW = pl.canvasW / pageScale;
+          pl.pdfH = pl.canvasH / pageScale;
+          pl.pdfX = pl.canvasX / pageScale;
+          pl.pdfY = pdfPageHeight - (pl.canvasY / pageScale) - pl.pdfH;
+        });
+
+        /* Rebuild overlays and image list */
+        updateOverlays();
+        renderImageList();
+      };
+      srcImg.src = entry.dataUrl;
     }
 
     function updatePlacementFromOverlay(p, overlay) {
@@ -938,8 +1141,20 @@
         entry.width = sw;
         entry.height = sh;
 
-        /* Update any existing placements using this image */
-        placements.filter(p => p.imageId === entry.id).forEach(p => { p.dataUrl = newUrl; });
+        /* Update any existing placements using this image — fix dimensions to match cropped aspect ratio */
+        const newAspect = sw / sh;
+        placements.filter(p => p.imageId === entry.id).forEach(p => {
+          p.dataUrl = newUrl;
+          /* Keep width, adjust height to match new cropped aspect ratio, centered on old position */
+          const oldCenterY = p.canvasY + p.canvasH / 2;
+          p.canvasH = p.canvasW / newAspect;
+          p.canvasY = oldCenterY - p.canvasH / 2;
+          /* Recalculate PDF coordinates */
+          p.pdfW = p.canvasW / pageScale;
+          p.pdfH = p.canvasH / pageScale;
+          p.pdfX = p.canvasX / pageScale;
+          p.pdfY = pdfPageHeight - (p.canvasY / pageScale) - p.pdfH;
+        });
         updateOverlays();
         renderImageList();
         closeCrop();
