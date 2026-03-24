@@ -13,7 +13,6 @@
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    html{scroll-behavior:smooth}
     .article-header{max-width:var(--max-w);margin:0 auto;padding:2.5rem 1.5rem 1rem;text-align:center}
     .article-header h1{font-size:2rem;font-weight:800;line-height:1.3}
     .article-header .subtitle{color:var(--text-muted);font-size:1.05rem;margin-top:.5rem;max-width:650px;margin-left:auto;margin-right:auto}
@@ -68,12 +67,13 @@
     .methodology{margin-bottom:2rem}
     .methodology-box{background:var(--bg-alt);border-radius:var(--radius);padding:1.25rem 1.5rem;font-size:.85rem;color:var(--text-muted);line-height:1.6}
     .methodology-box h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.5rem}
-    .jump-nav{position:sticky;top:0;z-index:90;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);margin:0 -1.5rem;padding:0 1.5rem}
-    .jump-nav-inner{max-width:var(--max-w);margin:0 auto;display:flex;gap:.35rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.6rem 0}
-    .jump-nav-inner::-webkit-scrollbar{display:none}
-    .jump-nav-inner a{flex-shrink:0;font-size:.78rem;font-weight:600;color:var(--text-muted);text-decoration:none;padding:.4rem .75rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);white-space:nowrap;transition:all .2s}
-    .jump-nav-inner a:hover,.jump-nav-inner a:focus{color:var(--text);border-color:var(--text-muted);background:var(--bg-alt)}
-    .jump-nav-inner a.jn-active{color:#fff;background:var(--teal);border-color:var(--teal)}
+    /* Jump-links sticky nav */
+    .jump-links{position:sticky;top:0;z-index:100;background:rgba(254,252,243,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:.5rem 0;margin-bottom:1.5rem}
+    .jump-links-inner{max-width:var(--max-w);margin:0 auto;padding:0 1rem;display:flex;gap:.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .jump-links-inner::-webkit-scrollbar{display:none}
+    .jump-links-inner a{flex-shrink:0;font-size:.78rem;font-weight:600;color:var(--text-muted);text-decoration:none;padding:.35rem .7rem;border-radius:20px;border:1px solid var(--border);background:#fff;white-space:nowrap;transition:all .15s ease}
+    .jump-links-inner a:hover{border-color:var(--amber);color:var(--text)}
+    .jump-links-inner a.active{background:var(--teal);color:#fff;border-color:var(--teal)}
     @media(max-width:600px){
       .pros-cons-grid{grid-template-columns:1fr}
       .big-table{font-size:.75rem}
@@ -111,20 +111,20 @@
     <p class="meta">Updated March 2026 · 8 min read</p>
   </div>
 
-  <div class="article-body">
+  <!-- Sticky jump-links for mobile navigation -->
+  <nav class="jump-links" id="jumpLinks">
+    <div class="jump-links-inner">
+      <a href="#parchment" data-target="parchment">Parchment</a>
+      <a href="#adobe" data-target="adobe">Adobe Acrobat</a>
+      <a href="#foxit" data-target="foxit">Foxit</a>
+      <a href="#nitro" data-target="nitro">Nitro</a>
+      <a href="#smallpdf" data-target="smallpdf">Smallpdf</a>
+      <a href="#pdfxchange" data-target="pdfxchange">PDF-XChange</a>
+      <a href="#comparison-table" data-target="comparison-table">Compare</a>
+    </div>
+  </nav>
 
-    <!-- Jump-links nav -->
-    <nav class="jump-nav" aria-label="Jump to editor">
-      <div class="jump-nav-inner">
-        <a href="#parchment">Parchment</a>
-        <a href="#adobe">Adobe Acrobat</a>
-        <a href="#foxit">Foxit</a>
-        <a href="#nitro">Nitro</a>
-        <a href="#smallpdf">Smallpdf</a>
-        <a href="#pdfxchange">PDF-XChange</a>
-        <a href="#comparison-table">Compare</a>
-      </div>
-    </nav>
+  <div class="article-body">
 
     <!-- Table of Contents -->
     <div class="toc">
@@ -660,18 +660,33 @@
   <script>renderNav('');renderFooter();</script>
   <script>
   (function(){
-    var links=document.querySelectorAll('.jump-nav-inner a');
-    var ids=Array.prototype.map.call(links,function(a){return a.getAttribute('href').slice(1)});
+    var links=document.querySelectorAll('.jump-links-inner a[data-target]');
+    var ids=Array.from(links).map(function(a){return a.dataset.target});
     var sections=ids.map(function(id){return document.getElementById(id)}).filter(Boolean);
     function update(){
       var scrollY=window.scrollY||window.pageYOffset;
       var active='';
-      sections.forEach(function(s){if(s.offsetTop-120<=scrollY)active=s.id});
+      for(var i=sections.length-1;i>=0;i--){
+        if(sections[i].getBoundingClientRect().top<=120){active=ids[i];break}
+      }
       links.forEach(function(a){
-        a.classList.toggle('jn-active',a.getAttribute('href')==='#'+active);
+        a.classList.toggle('active',a.dataset.target===active);
+        if(a.dataset.target===active){
+          a.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+        }
       });
     }
-    window.addEventListener('scroll',update,{passive:true});
+    var ticking=false;
+    window.addEventListener('scroll',function(){
+      if(!ticking){requestAnimationFrame(function(){update();ticking=false});ticking=true}
+    });
+    links.forEach(function(a){
+      a.addEventListener('click',function(e){
+        e.preventDefault();
+        var el=document.getElementById(a.dataset.target);
+        if(el)el.scrollIntoView({behavior:'smooth'});
+      });
+    });
     update();
   })();
   </script>
