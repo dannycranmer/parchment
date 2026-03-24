@@ -190,6 +190,17 @@ function setProgress(bar, pct) {
   bar.querySelector('.fill').style.width = pct + '%';
 }
 
+/* Usage tracking */
+function trackUsage() {
+  const count = parseInt(localStorage.getItem('parchment_uses') || '0', 10) + 1;
+  localStorage.setItem('parchment_uses', count);
+  return count;
+}
+
+function getUsageCount() {
+  return parseInt(localStorage.getItem('parchment_uses') || '0', 10);
+}
+
 /* Download helper */
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -198,11 +209,12 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  trackUsage();
   showPostActionNudge();
   showPostActionCTA();
 }
 
-/* Post-action donation CTA — toast after successful PDF operation */
+/* Post-action donation CTA — usage-aware toast after successful PDF operation */
 function showPostActionCTA() {
   /* Only show once per session */
   if (sessionStorage.getItem('parchment_cta_shown')) return;
@@ -212,11 +224,21 @@ function showPostActionCTA() {
 
   sessionStorage.setItem('parchment_cta_shown', '1');
 
+  const uses = getUsageCount();
+
   setTimeout(() => {
     const toast = document.createElement('div');
     toast.className = 'post-action-cta';
-    toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#e2e8f0;padding:.75rem 1.25rem;border-radius:12px;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:9999;cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .3s ease,transform .3s ease;max-width:320px';
-    toast.innerHTML = 'Glad this helped? <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="color:#2dd4bf;font-weight:600;text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">&#9749; Buy us a coffee</a>';
+
+    if (uses >= 3) {
+      /* Prominent toast for repeat users */
+      toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#e2e8f0;padding:1rem 1.5rem;border-radius:12px;font-size:.95rem;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:9999;cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .3s ease,transform .3s ease;max-width:360px;border-left:3px solid #2dd4bf';
+      toast.innerHTML = 'You\'ve processed ' + uses + ' files for free — help keep Parchment free <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="color:#2dd4bf;font-weight:700;text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">&#9749; Buy us a coffee</a>';
+    } else {
+      /* Simple toast for new users (1-2 uses) */
+      toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#e2e8f0;padding:.75rem 1.25rem;border-radius:12px;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:9999;cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .3s ease,transform .3s ease;max-width:320px';
+      toast.innerHTML = 'Glad this helped? <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="color:#2dd4bf;font-weight:600;text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">&#9749; Buy us a coffee</a>';
+    }
 
     document.body.appendChild(toast);
 
@@ -233,8 +255,38 @@ function showPostActionCTA() {
     }
 
     toast.addEventListener('click', dismiss);
-    setTimeout(dismiss, 10000);
+    setTimeout(dismiss, uses >= 3 ? 15000 : 10000);
   }, 1000);
+
+  /* Show persistent banner for power users (5+ uses) */
+  if (uses >= 5) showPowerUserBanner(uses);
+}
+
+/* Persistent bottom banner for power users — dismissible, non-blocking */
+function showPowerUserBanner(uses) {
+  if (sessionStorage.getItem('parchment_banner_dismissed')) return;
+  if (document.querySelector('.parchment-power-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'parchment-power-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(15,23,42,.92);backdrop-filter:blur(8px);color:#e2e8f0;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:center;gap:1rem;z-index:9990;border-top:2px solid #2dd4bf;font-size:.9rem;opacity:0;transform:translateY(100%);transition:opacity .4s ease,transform .4s ease';
+  banner.innerHTML = '<span style="flex:1;text-align:center">You\'re a power user! \uD83C\uDF89 You\'ve processed ' + uses + ' files for free. Consider supporting Parchment</span>'
+    + '<a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="background:#2dd4bf;color:#0f172a;padding:.5rem 1rem;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap;font-size:.85rem">☕ Buy me a coffee</a>'
+    + '<button style="position:absolute;top:.4rem;right:.6rem;background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1" aria-label="Dismiss">&times;</button>';
+
+  document.body.appendChild(banner);
+
+  requestAnimationFrame(() => {
+    banner.style.opacity = '1';
+    banner.style.transform = 'translateY(0)';
+  });
+
+  banner.querySelector('button').addEventListener('click', () => {
+    sessionStorage.setItem('parchment_banner_dismissed', '1');
+    banner.style.opacity = '0';
+    banner.style.transform = 'translateY(100%)';
+    setTimeout(() => banner.remove(), 400);
+  });
 }
 
 /* Post-action conversion nudge — subtle link to comparison page after tool use */
