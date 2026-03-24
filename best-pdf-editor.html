@@ -78,11 +78,40 @@
     .top-pick-badge{display:inline-flex;align-items:center;gap:.35rem;background:var(--teal);color:#fff;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.3rem .7rem;border-radius:20px;margin-bottom:.75rem}
     .affiliate-note{font-size:.75rem;color:var(--text-muted);margin-top:.5rem;font-style:italic}
     .affiliate-note a{color:var(--text-muted);text-decoration:underline}
-    @media(max-width:600px){
-      .pros-cons-grid{grid-template-columns:1fr}
-      .big-table{font-size:.75rem}
-      .big-table th,.big-table td{padding:.4rem .35rem}
+    @media(max-width:768px){
+      .bmc-banner-inline{flex-direction:column;align-items:flex-start !important;gap:.75rem !important;padding:.85rem 1rem !important}
+      .bmc-banner-inline span{font-size:1rem !important}
+      .article-header{padding:1.5rem 1rem .75rem}
       .article-header h1{font-size:1.5rem}
+      .article-header .subtitle{font-size:.92rem}
+      .article-body{padding:0 1rem 1.5rem}
+      .toc{padding:1rem}
+      .toc ol{padding-left:1rem}
+      .editor-section h2{font-size:1.2rem;gap:.5rem}
+      .editor-section h2 .rank{width:28px;height:28px;font-size:.8rem}
+      .pricing-tiers{flex-direction:column}
+      .pricing-tier{min-width:0}
+      .pros-cons-grid{grid-template-columns:1fr}
+      .pricing-box{flex-direction:column;align-items:flex-start;gap:.5rem}
+      .verdict-box{padding:.85rem 1rem;font-size:.85rem}
+      .cta-row{flex-direction:column;align-items:stretch}
+      .cta-row .btn{text-align:center}
+      .editor-section.top-pick{padding:1rem;border-width:1.5px}
+      .big-table-wrap h2{font-size:1.15rem}
+      .big-table{font-size:.72rem}
+      .big-table th,.big-table td{padding:.4rem .3rem}
+      .faq-item{padding:.85rem 1rem}
+      .faq-item h3{font-size:.88rem}
+      .faq-item p{font-size:.82rem}
+      .methodology-box{padding:1rem}
+    }
+    @media(max-width:480px){
+      .article-header h1{font-size:1.25rem}
+      .article-header .subtitle{font-size:.85rem}
+      .editor-section h2{font-size:1.05rem;flex-wrap:wrap}
+      .big-table{font-size:.65rem}
+      .big-table th,.big-table td{padding:.3rem .2rem}
+      .jump-links-inner a{font-size:.72rem;padding:.3rem .55rem}
     }
   </style>
   <script type="application/ld+json">
@@ -190,7 +219,7 @@
         <a href="index.html" class="btn btn-primary">Try Parchment — Free</a>
       </div>
 
-      <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:linear-gradient(135deg,#FFF8E1,#FFF3CD);border:1px solid #E8D5A3;border-radius:var(--radius);display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <div class="bmc-banner-inline" style="margin-top:1.25rem;padding:1rem 1.25rem;background:linear-gradient(135deg,#FFF8E1,#FFF3CD);border:1px solid #E8D5A3;border-radius:var(--radius);display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
         <span style="font-size:1.1rem;color:var(--text);line-height:1.5">Love that Parchment is free? <strong>Help keep it that way</strong></span>
         <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:#FFDD00;color:#000;font-weight:700;font-size:.88rem;padding:.5rem 1rem;border-radius:8px;text-decoration:none;white-space:nowrap">☕ Buy me a coffee</a>
       </div>
