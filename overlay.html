@@ -49,6 +49,27 @@
     .placed-images .img-badge{display:inline-flex;align-items:center;gap:.4rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.8rem;margin:.2rem}
     .placed-images .img-badge button{background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:.9rem}
     .page-canvas-container{text-align:center;overflow:auto}
+    /* Crop modal */
+    .crop-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .crop-modal{background:#fff;border-radius:var(--radius);max-width:90vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden}
+    .crop-modal-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg)}
+    .crop-modal-header h3{font-size:.95rem;font-weight:700;margin:0}
+    .crop-modal-header button{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-light);padding:.2rem .4rem;border-radius:4px}
+    .crop-modal-header button:hover{color:var(--accent);background:var(--accent-soft)}
+    .crop-modal-body{position:relative;overflow:auto;flex:1;display:flex;align-items:center;justify-content:center;padding:1rem;background:#e8e4de;min-height:200px}
+    .crop-canvas-wrap{position:relative;display:inline-block;user-select:none;line-height:0}
+    .crop-canvas-wrap img{display:block;max-width:100%;max-height:65vh}
+    .crop-dim{position:absolute;background:rgba(0,0,0,.45);pointer-events:none}
+    .crop-region{position:absolute;border:2px dashed var(--accent);box-sizing:border-box;pointer-events:none}
+    .crop-handle{position:absolute;width:14px;height:14px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:5;cursor:pointer;transform:translate(-50%,-50%);touch-action:none}
+    .crop-handle[data-edge="n"],.crop-handle[data-edge="s"]{cursor:ns-resize}
+    .crop-handle[data-edge="e"],.crop-handle[data-edge="w"]{cursor:ew-resize}
+    .crop-handle[data-edge="nw"]{cursor:nwse-resize}
+    .crop-handle[data-edge="ne"]{cursor:nesw-resize}
+    .crop-handle[data-edge="sw"]{cursor:nesw-resize}
+    .crop-handle[data-edge="se"]{cursor:nwse-resize}
+    .crop-modal-footer{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-top:1px solid var(--border);background:var(--bg)}
+    .crop-modal-footer .crop-dims{font-size:.8rem;color:var(--text-muted);flex:1}
   </style>
   <meta property="og:url" content="https://parchpdf.com/overlay.html">
   <meta property="og:image" content="https://parchpdf.com/og-image.png">
@@ -141,6 +162,42 @@
 
     <div class="progress-bar" id="progress"><div class="fill"></div></div>
     <div class="status-msg" id="status"></div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div class="crop-modal-bg" id="cropModal" style="display:none">
+    <div class="crop-modal">
+      <div class="crop-modal-header">
+        <h3>✂️ Crop Image</h3>
+        <button id="cropClose" title="Cancel">✕</button>
+      </div>
+      <div class="crop-modal-body">
+        <div class="crop-canvas-wrap" id="cropWrap">
+          <img id="cropImg">
+          <!-- Dim overlays (top/bottom/left/right outside crop region) -->
+          <div class="crop-dim" id="cropDimT"></div>
+          <div class="crop-dim" id="cropDimB"></div>
+          <div class="crop-dim" id="cropDimL"></div>
+          <div class="crop-dim" id="cropDimR"></div>
+          <!-- Crop region border -->
+          <div class="crop-region" id="cropRegion"></div>
+          <!-- 8 handles: corners + edges -->
+          <div class="crop-handle" data-edge="nw" id="chNW"></div>
+          <div class="crop-handle" data-edge="n" id="chN"></div>
+          <div class="crop-handle" data-edge="ne" id="chNE"></div>
+          <div class="crop-handle" data-edge="e" id="chE"></div>
+          <div class="crop-handle" data-edge="se" id="chSE"></div>
+          <div class="crop-handle" data-edge="s" id="chS"></div>
+          <div class="crop-handle" data-edge="sw" id="chSW"></div>
+          <div class="crop-handle" data-edge="w" id="chW"></div>
+        </div>
+      </div>
+      <div class="crop-modal-footer">
+        <span class="crop-dims" id="cropDims">0 × 0</span>
+        <button class="btn btn-secondary" id="cropReset">Reset</button>
+        <button class="btn btn-primary" id="cropApply">Apply Crop</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous"></script>
@@ -297,6 +354,17 @@
         info.innerHTML = '<div class="img-name">' + escapeHtml(entry.name) + '</div>'
           + '<div class="img-meta">' + entry.width + '\u00d7' + entry.height + 'px</div>';
         item.appendChild(info);
+
+        /* Crop button */
+        const cropBtn = document.createElement('button');
+        cropBtn.textContent = '✂️';
+        cropBtn.title = 'Crop image';
+        cropBtn.style.fontSize = '1rem';
+        cropBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCrop(entry);
+        });
+        item.appendChild(cropBtn);
 
         /* Select button */
         const selectBtn = document.createElement('button');
@@ -679,6 +747,205 @@
         img.src = dataUrl;
       });
     }
+
+    /* ===== CROP FUNCTIONALITY ===== */
+    const cropModal = document.getElementById('cropModal');
+    const cropImg = document.getElementById('cropImg');
+    const cropWrap = document.getElementById('cropWrap');
+    const cropRegion = document.getElementById('cropRegion');
+    const cropDimT = document.getElementById('cropDimT');
+    const cropDimB = document.getElementById('cropDimB');
+    const cropDimL = document.getElementById('cropDimL');
+    const cropDimR = document.getElementById('cropDimR');
+    const cropDims = document.getElementById('cropDims');
+    const cropApplyBtn = document.getElementById('cropApply');
+    const cropResetBtn = document.getElementById('cropReset');
+    const cropCloseBtn = document.getElementById('cropClose');
+
+    let cropState = null; /* { imageId, imgW, imgH, displayW, displayH, crop: {x,y,w,h} in display coords } */
+
+    function openCrop(imageEntry) {
+      cropState = { imageId: imageEntry.id, imgW: imageEntry.width, imgH: imageEntry.height, crop: null };
+      cropImg.src = imageEntry.dataUrl;
+      cropModal.style.display = 'flex';
+
+      cropImg.onload = () => {
+        const dw = cropImg.offsetWidth;
+        const dh = cropImg.offsetHeight;
+        cropState.displayW = dw;
+        cropState.displayH = dh;
+        /* Start with full image selected */
+        cropState.crop = { x: 0, y: 0, w: dw, h: dh };
+        updateCropUI();
+      };
+      /* If already loaded (cached) */
+      if (cropImg.complete && cropImg.offsetWidth > 0) {
+        const dw = cropImg.offsetWidth;
+        const dh = cropImg.offsetHeight;
+        cropState.displayW = dw;
+        cropState.displayH = dh;
+        cropState.crop = { x: 0, y: 0, w: dw, h: dh };
+        updateCropUI();
+      }
+    }
+
+    function closeCrop() {
+      cropModal.style.display = 'none';
+      cropState = null;
+    }
+
+    cropCloseBtn.addEventListener('click', closeCrop);
+    cropModal.addEventListener('click', (e) => { if (e.target === cropModal) closeCrop(); });
+
+    cropResetBtn.addEventListener('click', () => {
+      if (!cropState) return;
+      cropState.crop = { x: 0, y: 0, w: cropState.displayW, h: cropState.displayH };
+      updateCropUI();
+    });
+
+    function updateCropUI() {
+      if (!cropState || !cropState.crop) return;
+      const c = cropState.crop;
+      const dw = cropState.displayW;
+      const dh = cropState.displayH;
+
+      /* Crop region border */
+      cropRegion.style.left = c.x + 'px';
+      cropRegion.style.top = c.y + 'px';
+      cropRegion.style.width = c.w + 'px';
+      cropRegion.style.height = c.h + 'px';
+
+      /* Dim overlays: top, bottom, left, right */
+      cropDimT.style.left = '0'; cropDimT.style.top = '0';
+      cropDimT.style.width = dw + 'px'; cropDimT.style.height = c.y + 'px';
+
+      cropDimB.style.left = '0'; cropDimB.style.top = (c.y + c.h) + 'px';
+      cropDimB.style.width = dw + 'px'; cropDimB.style.height = (dh - c.y - c.h) + 'px';
+
+      cropDimL.style.left = '0'; cropDimL.style.top = c.y + 'px';
+      cropDimL.style.width = c.x + 'px'; cropDimL.style.height = c.h + 'px';
+
+      cropDimR.style.left = (c.x + c.w) + 'px'; cropDimR.style.top = c.y + 'px';
+      cropDimR.style.width = (dw - c.x - c.w) + 'px'; cropDimR.style.height = c.h + 'px';
+
+      /* Position handles */
+      positionHandle('chNW', c.x, c.y);
+      positionHandle('chN', c.x + c.w / 2, c.y);
+      positionHandle('chNE', c.x + c.w, c.y);
+      positionHandle('chE', c.x + c.w, c.y + c.h / 2);
+      positionHandle('chSE', c.x + c.w, c.y + c.h);
+      positionHandle('chS', c.x + c.w / 2, c.y + c.h);
+      positionHandle('chSW', c.x, c.y + c.h);
+      positionHandle('chW', c.x, c.y + c.h / 2);
+
+      /* Show dimensions in original image pixels */
+      const scaleX = cropState.imgW / dw;
+      const scaleY = cropState.imgH / dh;
+      const pw = Math.round(c.w * scaleX);
+      const ph = Math.round(c.h * scaleY);
+      cropDims.textContent = pw + ' × ' + ph + ' px';
+    }
+
+    function positionHandle(id, x, y) {
+      const el = document.getElementById(id);
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+    }
+
+    /* Handle dragging */
+    const handleEdges = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+    handleEdges.forEach(edge => {
+      const el = document.getElementById('ch' + edge.toUpperCase());
+      const startDragHandle = (startX, startY) => {
+        const startCrop = { ...cropState.crop };
+        return (mx, my) => {
+          const dx = mx - startX;
+          const dy = my - startY;
+          const dw = cropState.displayW;
+          const dh = cropState.displayH;
+          let { x, y, w, h } = startCrop;
+          const MIN = 20;
+
+          if (edge.includes('w')) {
+            const nx = Math.max(0, Math.min(x + dx, x + w - MIN));
+            w = w - (nx - x);
+            x = nx;
+          }
+          if (edge.includes('e')) {
+            w = Math.max(MIN, Math.min(startCrop.w + dx, dw - x));
+          }
+          if (edge.includes('n')) {
+            const ny = Math.max(0, Math.min(y + dy, y + h - MIN));
+            h = h - (ny - y);
+            y = ny;
+          }
+          if (edge.includes('s')) {
+            h = Math.max(MIN, Math.min(startCrop.h + dy, dh - y));
+          }
+
+          cropState.crop = { x, y, w, h };
+          updateCropUI();
+        };
+      };
+
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const onMove = startDragHandle(e.clientX, e.clientY);
+        const handler = (me) => onMove(me.clientX, me.clientY);
+        const onUp = () => { document.removeEventListener('mousemove', handler); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', handler);
+        document.addEventListener('mouseup', onUp);
+      });
+
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const t = e.touches[0];
+        const onMove = startDragHandle(t.clientX, t.clientY);
+        const handler = (me) => { me.preventDefault(); onMove(me.touches[0].clientX, me.touches[0].clientY); };
+        const onEnd = () => { document.removeEventListener('touchmove', handler); document.removeEventListener('touchend', onEnd); };
+        document.addEventListener('touchmove', handler, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      }, { passive: false });
+    });
+
+    /* Apply crop */
+    cropApplyBtn.addEventListener('click', () => {
+      if (!cropState) return;
+      const c = cropState.crop;
+      const entry = uploadedImages.find(i => i.id === cropState.imageId);
+      if (!entry) { closeCrop(); return; }
+
+      const scaleX = cropState.imgW / cropState.displayW;
+      const scaleY = cropState.imgH / cropState.displayH;
+      const sx = Math.round(c.x * scaleX);
+      const sy = Math.round(c.y * scaleY);
+      const sw = Math.round(c.w * scaleX);
+      const sh = Math.round(c.h * scaleY);
+
+      if (sw < 1 || sh < 1) { closeCrop(); return; }
+
+      /* Draw cropped image to canvas */
+      const srcImg = new Image();
+      srcImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = sw;
+        canvas.height = sh;
+        canvas.getContext('2d').drawImage(srcImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        const fmt = entry.dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const newUrl = canvas.toDataURL(fmt, 0.95);
+
+        entry.dataUrl = newUrl;
+        entry.width = sw;
+        entry.height = sh;
+
+        /* Update any existing placements using this image */
+        placements.filter(p => p.imageId === entry.id).forEach(p => { p.dataUrl = newUrl; });
+        updateOverlays();
+        renderImageList();
+        closeCrop();
+      };
+      srcImg.src = entry.dataUrl;
+    });
   </script>
   <script data-goatcounter="https://parchpdf.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
