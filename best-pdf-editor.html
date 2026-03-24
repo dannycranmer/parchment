@@ -13,6 +13,7 @@
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="css/style.css">
   <style>
+    html{scroll-behavior:smooth}
     .article-header{max-width:var(--max-w);margin:0 auto;padding:2.5rem 1.5rem 1rem;text-align:center}
     .article-header h1{font-size:2rem;font-weight:800;line-height:1.3}
     .article-header .subtitle{color:var(--text-muted);font-size:1.05rem;margin-top:.5rem;max-width:650px;margin-left:auto;margin-right:auto}
@@ -67,6 +68,12 @@
     .methodology{margin-bottom:2rem}
     .methodology-box{background:var(--bg-alt);border-radius:var(--radius);padding:1.25rem 1.5rem;font-size:.85rem;color:var(--text-muted);line-height:1.6}
     .methodology-box h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.5rem}
+    .jump-nav{position:sticky;top:0;z-index:90;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);margin:0 -1.5rem;padding:0 1.5rem}
+    .jump-nav-inner{max-width:var(--max-w);margin:0 auto;display:flex;gap:.35rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.6rem 0}
+    .jump-nav-inner::-webkit-scrollbar{display:none}
+    .jump-nav-inner a{flex-shrink:0;font-size:.78rem;font-weight:600;color:var(--text-muted);text-decoration:none;padding:.4rem .75rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);white-space:nowrap;transition:all .2s}
+    .jump-nav-inner a:hover,.jump-nav-inner a:focus{color:var(--text);border-color:var(--text-muted);background:var(--bg-alt)}
+    .jump-nav-inner a.jn-active{color:#fff;background:var(--teal);border-color:var(--teal)}
     @media(max-width:600px){
       .pros-cons-grid{grid-template-columns:1fr}
       .big-table{font-size:.75rem}
@@ -105,6 +112,19 @@
   </div>
 
   <div class="article-body">
+
+    <!-- Jump-links nav -->
+    <nav class="jump-nav" aria-label="Jump to editor">
+      <div class="jump-nav-inner">
+        <a href="#parchment">Parchment</a>
+        <a href="#adobe">Adobe Acrobat</a>
+        <a href="#foxit">Foxit</a>
+        <a href="#nitro">Nitro</a>
+        <a href="#smallpdf">Smallpdf</a>
+        <a href="#pdfxchange">PDF-XChange</a>
+        <a href="#comparison-table">Compare</a>
+      </div>
+    </nav>
 
     <!-- Table of Contents -->
     <div class="toc">
@@ -638,6 +658,23 @@
 
   <script src="js/common.js"></script>
   <script>renderNav('');renderFooter();</script>
+  <script>
+  (function(){
+    var links=document.querySelectorAll('.jump-nav-inner a');
+    var ids=Array.prototype.map.call(links,function(a){return a.getAttribute('href').slice(1)});
+    var sections=ids.map(function(id){return document.getElementById(id)}).filter(Boolean);
+    function update(){
+      var scrollY=window.scrollY||window.pageYOffset;
+      var active='';
+      sections.forEach(function(s){if(s.offsetTop-120<=scrollY)active=s.id});
+      links.forEach(function(a){
+        a.classList.toggle('jn-active',a.getAttribute('href')==='#'+active);
+      });
+    }
+    window.addEventListener('scroll',update,{passive:true});
+    update();
+  })();
+  </script>
   <script data-goatcounter="https://parchpdf.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
