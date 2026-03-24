@@ -199,6 +199,42 @@ function downloadBlob(blob, filename) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   showPostActionNudge();
+  showPostActionCTA();
+}
+
+/* Post-action donation CTA — toast after successful PDF operation */
+function showPostActionCTA() {
+  /* Only show once per session */
+  if (sessionStorage.getItem('parchment_cta_shown')) return;
+  /* Don't show on non-tool pages */
+  const path = window.location.pathname;
+  if (path.includes('index') || path.includes('best-pdf-editor') || path.includes('compare')) return;
+
+  sessionStorage.setItem('parchment_cta_shown', '1');
+
+  setTimeout(() => {
+    const toast = document.createElement('div');
+    toast.className = 'post-action-cta';
+    toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#e2e8f0;padding:.75rem 1.25rem;border-radius:12px;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:9999;cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .3s ease,transform .3s ease;max-width:320px';
+    toast.innerHTML = 'Glad this helped? <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="color:#2dd4bf;font-weight:600;text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">&#9749; Buy us a coffee</a>';
+
+    document.body.appendChild(toast);
+
+    /* Animate in */
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    });
+
+    function dismiss() {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(12px)';
+      setTimeout(() => toast.remove(), 300);
+    }
+
+    toast.addEventListener('click', dismiss);
+    setTimeout(dismiss, 10000);
+  }, 1000);
 }
 
 /* Post-action conversion nudge — subtle link to comparison page after tool use */

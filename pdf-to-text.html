@@ -190,6 +190,7 @@
           setStatus(status, 'No text found — this PDF may contain only images. Try an OCR tool for scanned documents.', 'error');
         } else {
           setStatus(status, `Extracted ${wordCount.toLocaleString()} words from ${totalPages} page${totalPages !== 1 ? 's' : ''}`, 'success');
+          showPostActionCTA();
         }
       } catch (err) {
         setStatus(status, 'Error: ' + err.message, 'error');
