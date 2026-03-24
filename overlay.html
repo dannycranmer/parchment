@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Add Image to PDF Online Free — Parchment</title>
+  <meta name="description" content="Overlay images onto PDF pages for free. Upload a PDF, add images (JPG, PNG, WebP), position and resize them, then download. 100% client-side — your files never leave your device.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://parchpdf.com/overlay.html">
+  <meta property="og:title" content="Add Image to PDF Online Free — Parchment">
+  <meta property="og:description" content="Overlay images onto PDF pages for free. 100% private — runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .overlay-section{margin-top:1rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+    .overlay-section h3{font-size:.95rem;font-weight:700;margin-bottom:.75rem}
+    .image-upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all .25s;background:var(--bg);position:relative}
+    .image-upload-zone:hover,.image-upload-zone.dragover{background:var(--accent-soft);border-color:var(--accent)}
+    .image-upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .image-upload-zone .icon{font-size:1.8rem;margin-bottom:.3rem}
+    .image-upload-zone p{color:var(--text-muted);font-size:.85rem}
+    .image-list{margin-top:.75rem;display:flex;flex-direction:column;gap:.4rem}
+    .image-list-item{display:flex;align-items:center;gap:.65rem;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:.5rem .7rem;font-size:.85rem;transition:all .2s}
+    .image-list-item:hover{border-color:var(--border)}
+    .image-list-item img{width:36px;height:36px;object-fit:contain;border-radius:4px;background:#fff;border:1px solid var(--border-light)}
+    .image-list-item .img-info{flex:1;min-width:0}
+    .image-list-item .img-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .image-list-item .img-meta{font-size:.78rem;color:var(--text-muted)}
+    .image-list-item button{background:none;border:none;cursor:pointer;font-size:1rem;padding:.2rem .4rem;border-radius:4px;color:var(--text-light);transition:all .2s}
+    .image-list-item button:hover{color:var(--accent);background:var(--accent-soft)}
+    .opacity-row{display:flex;align-items:center;gap:.5rem;margin-top:.4rem}
+    .opacity-row label{font-size:.78rem;color:var(--text-muted);min-width:50px}
+    .opacity-row input[type="range"]{flex:1;max-width:120px}
+    .opacity-row .opacity-val{font-size:.78rem;color:var(--text-muted);min-width:30px}
+    .page-viewer{margin-top:1rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
+    .page-viewer h3{font-size:.9rem;font-weight:600;margin-bottom:.5rem;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between}
+    .page-nav{display:flex;gap:.5rem;align-items:center}
+    .page-nav button{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.25rem .6rem;cursor:pointer;font-size:.85rem;font-weight:600;transition:background .2s}
+    .page-nav button:hover{background:#fff}
+    .page-nav button:disabled{opacity:.4;cursor:not-allowed}
+    .page-nav span{font-size:.85rem;color:var(--text)}
+    .page-canvas-wrap{position:relative;display:inline-block;margin:0 auto;user-select:none}
+    .page-canvas-wrap canvas{display:block;max-width:100%;border:1px solid var(--border);border-radius:4px;background:#fff}
+    .img-overlay{position:absolute;border:2px dashed var(--accent);background:rgba(214,64,69,.03);cursor:move;display:none}
+    .img-overlay img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+    .img-overlay .img-remove{position:absolute;top:-10px;right:-10px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;z-index:5}
+    .img-overlay .img-resize{position:absolute;bottom:-5px;right:-5px;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:nwse-resize;z-index:5}
+    .placed-images{margin-top:.75rem}
+    .placed-images .img-badge{display:inline-flex;align-items:center;gap:.4rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.8rem;margin:.2rem}
+    .placed-images .img-badge button{background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:.9rem}
+    .page-canvas-container{text-align:center;overflow:auto}
+  </style>
+  <meta property="og:url" content="https://parchpdf.com/overlay.html">
+  <meta property="og:image" content="https://parchpdf.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Add Image to PDF Online Free — Parchment">
+  <meta name="twitter:description" content="Overlay images onto PDF pages for free. Upload a PDF, add images (JPG, PNG, WebP), position and resize them, then download. 100% client-side — your files never leave your device.">
+  <meta name="twitter:image" content="https://parchpdf.com/og-image.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Add Image to PDF - Parchment",
+    "description": "Overlay images onto PDF pages for free. Upload a PDF, add images (JPG, PNG, WebP), position and resize them, then download. 100% client-side — your files never leave your device.",
+    "url": "https://parchpdf.com/overlay.html",
+    "applicationCategory": "BrowserApplication",
+    "operatingSystem": "All",
+    "browserRequirements": "Requires JavaScript",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "Parchment",
+      "url": "https://parchpdf.com"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div style="display:none">Impact-Site-Verification: 0161bd52-e095-4b1c-aeb4-53b1caf7a9f6</div>
+  <div class="tool-header">
+    <h1>🖼️ Add Image to PDF</h1>
+    <p>Overlay images onto any page of your PDF — logos, stamps, photos, or signatures</p>
+    <div class="privacy-badge">🔒 Your files never leave your device</div>
+  </div>
+
+  <div class="tool-container">
+    <!-- Step 1: Upload PDF -->
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📁</div>
+      <p>Drag &amp; drop a PDF file here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <!-- Step 2: Upload images to overlay -->
+      <div class="overlay-section">
+        <h3>Add Images to Overlay</h3>
+        <div class="image-upload-zone" id="imageZone">
+          <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple>
+          <div class="icon">🖼️</div>
+          <p>Drop images here or <span class="browse" style="color:var(--accent);font-weight:700">browse</span> (JPG, PNG, WebP)</p>
+        </div>
+        <div class="image-list" id="imageList"></div>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-top:.5rem">Click an image below, then click on the PDF page to place it. Drag to reposition, resize from corner.</p>
+      </div>
+
+      <!-- Page viewer + image placement -->
+      <div class="page-viewer" id="pageViewer">
+        <h3>
+          <span>Place Images on Page</span>
+          <div class="page-nav">
+            <button id="prevPage">&#9664;</button>
+            <span id="pageLabel">1 / 1</span>
+            <button id="nextPage">&#9654;</button>
+          </div>
+        </h3>
+        <div id="selectedHint" style="font-size:.8rem;color:var(--accent);margin-bottom:.5rem;display:none">
+          Click on the page below to place the selected image
+        </div>
+        <div class="page-canvas-container">
+          <div class="page-canvas-wrap" id="pageWrap">
+            <canvas id="pageCanvas"></canvas>
+          </div>
+        </div>
+        <div class="placed-images" id="placedImages"></div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="downloadBtn">Download PDF with Images</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('overlay'); renderFooter();
+
+    const dropZone = document.getElementById('dropZone');
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const imageZone = document.getElementById('imageZone');
+    const imageList = document.getElementById('imageList');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const pageCanvas = document.getElementById('pageCanvas');
+    const pageWrap = document.getElementById('pageWrap');
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    const pageLabel = document.getElementById('pageLabel');
+    const placedImages = document.getElementById('placedImages');
+    const selectedHint = document.getElementById('selectedHint');
+
+    let pdfData = null, pdfFileName = '', totalPages = 0, currentPage = 1;
+    let pdfJsDoc = null;
+    let pageScale = 1, pdfPageWidth = 0, pdfPageHeight = 0;
+
+    /* Available images (uploaded but not yet placed) */
+    let uploadedImages = []; /* { id, name, dataUrl, width, height, opacity } */
+    let selectedImageId = null;
+
+    /* Placed image overlays: { id, imageId, pageNum, canvasX/Y/W/H, pdfX/Y/W/H, dataUrl, opacity } */
+    let placements = [];
+
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function reset() {
+      pdfData = null; pdfFileName = ''; totalPages = 0; currentPage = 1;
+      placements = []; uploadedImages = []; selectedImageId = null;
+      if (pdfJsDoc) { pdfJsDoc.destroy(); pdfJsDoc = null; }
+      pdfInfo.style.display = 'none';
+      dropZone.style.display = '';
+      setStatus(status, '');
+      pageWrap.querySelectorAll('.img-overlay').forEach(el => el.remove());
+      placedImages.innerHTML = '';
+      imageList.innerHTML = '';
+      selectedHint.style.display = 'none';
+    }
+    resetBtn.addEventListener('click', reset);
+
+    /* Load PDF */
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF\u2026');
+      try {
+        pdfData = new Uint8Array(await file.arrayBuffer());
+        const doc = await PDFLib.PDFDocument.load(pdfData);
+        totalPages = doc.getPageCount();
+        pdfFileName = file.name;
+        fileInfo.innerHTML = '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) +
+          '</div><div class="file-meta">' + formatSize(file.size) + ' \u00b7 ' + totalPages + ' page' + (totalPages !== 1 ? 's' : '') + '</div></div>';
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        currentPage = 1;
+        placements = [];
+        placedImages.innerHTML = '';
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        pdfJsDoc = await pdfjsLib.getDocument({ data: pdfData.slice() }).promise;
+        await renderPage(currentPage);
+        setStatus(status, '');
+      } catch (err) {
+        if (err.message && (err.message.includes('encrypt') || err.message.includes('password'))) {
+          setStatus(status, 'This PDF is encrypted. Use the Unlock tool first.', 'error');
+        } else {
+          setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+        }
+        pdfData = null;
+      }
+    }
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+
+    /* Image upload zone */
+    const imageInput = imageZone.querySelector('input[type="file"]');
+    imageZone.addEventListener('dragover', e => { e.preventDefault(); imageZone.classList.add('dragover'); });
+    imageZone.addEventListener('dragleave', () => imageZone.classList.remove('dragover'));
+    imageZone.addEventListener('drop', e => {
+      e.preventDefault();
+      imageZone.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length) addImages(files);
+    });
+    imageInput.addEventListener('change', () => {
+      const files = Array.from(imageInput.files);
+      if (files.length) addImages(files);
+      imageInput.value = '';
+    });
+
+    function addImages(files) {
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const entry = {
+              id: Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              name: file.name,
+              dataUrl: reader.result,
+              width: img.width,
+              height: img.height,
+              opacity: 1.0
+            };
+            uploadedImages.push(entry);
+            renderImageList();
+            /* Auto-select the first image */
+            if (!selectedImageId) selectImage(entry.id);
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function selectImage(id) {
+      selectedImageId = id;
+      selectedHint.style.display = id ? '' : 'none';
+      renderImageList();
+    }
+
+    function renderImageList() {
+      imageList.innerHTML = '';
+      uploadedImages.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'image-list-item';
+        if (entry.id === selectedImageId) {
+          item.style.borderColor = 'var(--accent)';
+          item.style.background = 'var(--accent-soft)';
+        }
+
+        const thumb = document.createElement('img');
+        thumb.src = entry.dataUrl;
+        item.appendChild(thumb);
+
+        const info = document.createElement('div');
+        info.className = 'img-info';
+        info.innerHTML = '<div class="img-name">' + escapeHtml(entry.name) + '</div>'
+          + '<div class="img-meta">' + entry.width + '\u00d7' + entry.height + 'px</div>';
+        item.appendChild(info);
+
+        /* Select button */
+        const selectBtn = document.createElement('button');
+        selectBtn.textContent = entry.id === selectedImageId ? '✓' : '📌';
+        selectBtn.title = 'Select for placement';
+        selectBtn.style.fontSize = '1.1rem';
+        if (entry.id === selectedImageId) {
+          selectBtn.style.color = 'var(--accent)';
+        }
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectImage(entry.id === selectedImageId ? null : entry.id);
+        });
+        item.appendChild(selectBtn);
+
+        /* Remove button */
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.title = 'Remove image';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          uploadedImages = uploadedImages.filter(i => i.id !== entry.id);
+          /* Remove placements using this image */
+          placements = placements.filter(p => p.imageId !== entry.id);
+          if (selectedImageId === entry.id) selectedImageId = null;
+          selectedHint.style.display = selectedImageId ? '' : 'none';
+          renderImageList();
+          updateOverlays();
+          updateBadges();
+        });
+        item.appendChild(removeBtn);
+
+        /* Click row to select */
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+          selectImage(entry.id === selectedImageId ? null : entry.id);
+        });
+
+        /* Opacity slider */
+        const opacityRow = document.createElement('div');
+        opacityRow.className = 'opacity-row';
+        opacityRow.innerHTML = '<label>Opacity</label>';
+        const slider = document.createElement('input');
+        slider.type = 'range'; slider.min = '0.05'; slider.max = '1'; slider.step = '0.05';
+        slider.value = entry.opacity;
+        const valSpan = document.createElement('span');
+        valSpan.className = 'opacity-val';
+        valSpan.textContent = Math.round(entry.opacity * 100) + '%';
+        slider.addEventListener('input', (e) => {
+          e.stopPropagation();
+          entry.opacity = parseFloat(slider.value);
+          valSpan.textContent = Math.round(entry.opacity * 100) + '%';
+          /* Update existing placements for this image */
+          placements.filter(p => p.imageId === entry.id).forEach(p => { p.opacity = entry.opacity; });
+          updateOverlayOpacities(entry.id);
+        });
+        slider.addEventListener('click', e => e.stopPropagation());
+        opacityRow.appendChild(slider);
+        opacityRow.appendChild(valSpan);
+
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(item);
+        wrapper.appendChild(opacityRow);
+        imageList.appendChild(wrapper);
+      });
+    }
+
+    function updateOverlayOpacities(imageId) {
+      pageWrap.querySelectorAll('.img-overlay').forEach(el => {
+        const placement = placements.find(p => p.id === el.dataset.placementId);
+        if (placement && placement.imageId === imageId) {
+          el.querySelector('img').style.opacity = placement.opacity;
+        }
+      });
+    }
+
+    /* Page rendering */
+    async function renderPage(num) {
+      if (!pdfJsDoc) return;
+      const page = await pdfJsDoc.getPage(num);
+      const vp0 = page.getViewport({ scale: 1 });
+      const containerWidth = Math.min(750, pageWrap.parentElement.clientWidth - 20);
+      pageScale = containerWidth / vp0.width;
+      const viewport = page.getViewport({ scale: pageScale });
+
+      pdfPageWidth = vp0.width;
+      pdfPageHeight = vp0.height;
+
+      pageCanvas.width = viewport.width;
+      pageCanvas.height = viewport.height;
+      pageWrap.style.width = viewport.width + 'px';
+
+      const ctx = pageCanvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      pageLabel.textContent = num + ' / ' + totalPages;
+      prevPage.disabled = num <= 1;
+      nextPage.disabled = num >= totalPages;
+
+      updateOverlays();
+    }
+
+    prevPage.addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; renderPage(currentPage); }
+    });
+    nextPage.addEventListener('click', () => {
+      if (currentPage < totalPages) { currentPage++; renderPage(currentPage); }
+    });
+
+    /* Click on page to place selected image */
+    pageCanvas.addEventListener('click', (e) => {
+      if (!selectedImageId) {
+        setStatus(status, 'Select an image from the list above first', 'error');
+        return;
+      }
+      const entry = uploadedImages.find(i => i.id === selectedImageId);
+      if (!entry) return;
+      setStatus(status, '');
+
+      const rect = pageCanvas.getBoundingClientRect();
+      const canvasScaleX = pageCanvas.width / rect.width;
+      const canvasScaleY = pageCanvas.height / rect.height;
+      const clickX = (e.clientX - rect.left) * canvasScaleX;
+      const clickY = (e.clientY - rect.top) * canvasScaleY;
+
+      /* Default size: ~200px wide on canvas, maintain aspect ratio */
+      const imgW = Math.min(200, pageCanvas.width * 0.4);
+      const imgH = (entry.height / entry.width) * imgW;
+      const x = Math.max(0, Math.min(clickX - imgW / 2, pageCanvas.width - imgW));
+      const y = Math.max(0, Math.min(clickY - imgH / 2, pageCanvas.height - imgH));
+
+      const pdfX = x / pageScale;
+      const pdfY = pdfPageHeight - (y / pageScale) - (imgH / pageScale);
+
+      const placement = {
+        id: Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        imageId: entry.id,
+        pageNum: currentPage,
+        canvasX: x, canvasY: y, canvasW: imgW, canvasH: imgH,
+        pdfX: pdfX, pdfY: pdfY,
+        pdfW: imgW / pageScale, pdfH: imgH / pageScale,
+        dataUrl: entry.dataUrl,
+        opacity: entry.opacity,
+        name: entry.name
+      };
+      placements.push(placement);
+      createOverlay(placement);
+      updateBadges();
+    });
+
+    /* Create visual overlay for a placed image */
+    function createOverlay(p) {
+      const overlay = document.createElement('div');
+      overlay.className = 'img-overlay';
+      overlay.dataset.placementId = p.id;
+      overlay.style.display = p.pageNum === currentPage ? 'block' : 'none';
+
+      const canvasRect = pageCanvas.getBoundingClientRect();
+      const wrapRect = pageWrap.getBoundingClientRect();
+      const offsetX = canvasRect.left - wrapRect.left;
+      const offsetY = canvasRect.top - wrapRect.top;
+
+      overlay.style.left = (p.canvasX * (canvasRect.width / pageCanvas.width) + offsetX) + 'px';
+      overlay.style.top = (p.canvasY * (canvasRect.height / pageCanvas.height) + offsetY) + 'px';
+      overlay.style.width = (p.canvasW * (canvasRect.width / pageCanvas.width)) + 'px';
+      overlay.style.height = (p.canvasH * (canvasRect.height / pageCanvas.height)) + 'px';
+
+      const img = document.createElement('img');
+      img.src = p.dataUrl;
+      img.style.opacity = p.opacity;
+      overlay.appendChild(img);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'img-remove';
+      removeBtn.textContent = '\u2715';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        placements = placements.filter(pl => pl.id !== p.id);
+        overlay.remove();
+        updateBadges();
+      });
+      overlay.appendChild(removeBtn);
+
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'img-resize';
+      overlay.appendChild(resizeHandle);
+
+      /* Drag to move */
+      function startDrag(startX, startY) {
+        const startLeft = overlay.offsetLeft, startTop = overlay.offsetTop;
+        const onMove = (mx, my) => {
+          overlay.style.left = (startLeft + mx - startX) + 'px';
+          overlay.style.top = (startTop + my - startY) + 'px';
+          updatePlacementFromOverlay(p, overlay);
+        };
+        return onMove;
+      }
+
+      overlay.addEventListener('mousedown', (e) => {
+        if (e.target === resizeHandle || e.target === removeBtn) return;
+        e.preventDefault();
+        const onMove = startDrag(e.clientX, e.clientY);
+        const handler = (me) => onMove(me.clientX, me.clientY);
+        const onUp = () => { document.removeEventListener('mousemove', handler); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', handler);
+        document.addEventListener('mouseup', onUp);
+      });
+
+      overlay.addEventListener('touchstart', (e) => {
+        if (e.target === resizeHandle || e.target === removeBtn) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        const onMove = startDrag(t.clientX, t.clientY);
+        const handler = (me) => { me.preventDefault(); const t2 = me.touches[0]; onMove(t2.clientX, t2.clientY); };
+        const onEnd = () => { document.removeEventListener('touchmove', handler); document.removeEventListener('touchend', onEnd); };
+        document.addEventListener('touchmove', handler, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      }, { passive: false });
+
+      /* Resize handle */
+      function startResize(startX) {
+        const startW = overlay.offsetWidth, startH = overlay.offsetHeight;
+        const aspect = startW / startH;
+        return (mx) => {
+          const newW = Math.max(30, startW + mx - startX);
+          overlay.style.width = newW + 'px';
+          overlay.style.height = (newW / aspect) + 'px';
+          updatePlacementFromOverlay(p, overlay);
+        };
+      }
+
+      resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const onMove = startResize(e.clientX);
+        const handler = (me) => onMove(me.clientX);
+        const onUp = () => { document.removeEventListener('mousemove', handler); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', handler);
+        document.addEventListener('mouseup', onUp);
+      });
+
+      resizeHandle.addEventListener('touchstart', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const t = e.touches[0];
+        const onMove = startResize(t.clientX);
+        const handler = (me) => { me.preventDefault(); onMove(me.touches[0].clientX); };
+        const onEnd = () => { document.removeEventListener('touchmove', handler); document.removeEventListener('touchend', onEnd); };
+        document.addEventListener('touchmove', handler, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      }, { passive: false });
+
+      pageWrap.appendChild(overlay);
+    }
+
+    function updatePlacementFromOverlay(p, overlay) {
+      const canvasRect = pageCanvas.getBoundingClientRect();
+      const wrapRect = pageWrap.getBoundingClientRect();
+      const offsetX = canvasRect.left - wrapRect.left;
+      const offsetY = canvasRect.top - wrapRect.top;
+      const displayScaleX = pageCanvas.width / canvasRect.width;
+      const displayScaleY = pageCanvas.height / canvasRect.height;
+
+      const canvasX = (overlay.offsetLeft - offsetX) * displayScaleX;
+      const canvasY = (overlay.offsetTop - offsetY) * displayScaleY;
+      const canvasW = overlay.offsetWidth * displayScaleX;
+      const canvasH = overlay.offsetHeight * displayScaleY;
+
+      p.canvasX = canvasX; p.canvasY = canvasY;
+      p.canvasW = canvasW; p.canvasH = canvasH;
+      p.pdfX = canvasX / pageScale;
+      p.pdfY = pdfPageHeight - (canvasY / pageScale) - (canvasH / pageScale);
+      p.pdfW = canvasW / pageScale;
+      p.pdfH = canvasH / pageScale;
+    }
+
+    function updateOverlays() {
+      pageWrap.querySelectorAll('.img-overlay').forEach(el => el.remove());
+      placements.filter(p => p.pageNum === currentPage).forEach(p => createOverlay(p));
+    }
+
+    function updateBadges() {
+      if (placements.length === 0) { placedImages.innerHTML = ''; return; }
+      placedImages.innerHTML = '<span style="font-size:.8rem;color:var(--text-muted)">Placed images: </span>';
+      placements.forEach((p, i) => {
+        const badge = document.createElement('span');
+        badge.className = 'img-badge';
+        const shortName = p.name.length > 15 ? p.name.slice(0, 12) + '\u2026' : p.name;
+        badge.innerHTML = escapeHtml(shortName) + ' (p' + p.pageNum + ') <button title="Remove">\u00d7</button>';
+        badge.querySelector('button').addEventListener('click', () => {
+          placements.splice(i, 1);
+          updateOverlays();
+          updateBadges();
+        });
+        placedImages.appendChild(badge);
+      });
+    }
+
+    /* Download PDF with images embedded */
+    downloadBtn.addEventListener('click', async () => {
+      if (!pdfData) return;
+      if (placements.length === 0) {
+        setStatus(status, 'Please place at least one image on the document', 'error');
+        return;
+      }
+
+      downloadBtn.disabled = true;
+      setStatus(status, 'Embedding images\u2026');
+      setProgress(progress, 10);
+
+      try {
+        const doc = await PDFLib.PDFDocument.load(pdfData);
+        const pages = doc.getPages();
+
+        /* Embed all unique images */
+        const imgCache = {};
+        for (let i = 0; i < placements.length; i++) {
+          const p = placements[i];
+          if (!imgCache[p.dataUrl]) {
+            const imgBytes = await fetch(p.dataUrl).then(r => r.arrayBuffer());
+            /* Detect format from data URL */
+            if (p.dataUrl.startsWith('data:image/png')) {
+              imgCache[p.dataUrl] = await doc.embedPng(imgBytes);
+            } else {
+              /* JPEG and WebP — convert WebP to PNG via canvas if needed */
+              try {
+                imgCache[p.dataUrl] = await doc.embedJpg(imgBytes);
+              } catch (_) {
+                /* Fallback: convert to PNG via canvas */
+                const pngUrl = await convertToPng(p.dataUrl);
+                const pngBytes = await fetch(pngUrl).then(r => r.arrayBuffer());
+                imgCache[p.dataUrl] = await doc.embedPng(pngBytes);
+              }
+            }
+          }
+          setProgress(progress, 10 + (30 * (i + 1) / placements.length));
+        }
+
+        /* Place images on pages */
+        for (let i = 0; i < placements.length; i++) {
+          const p = placements[i];
+          const page = pages[p.pageNum - 1];
+          const embeddedImg = imgCache[p.dataUrl];
+
+          page.drawImage(embeddedImg, {
+            x: p.pdfX,
+            y: p.pdfY,
+            width: p.pdfW,
+            height: p.pdfH,
+            opacity: p.opacity
+          });
+
+          setProgress(progress, 40 + (50 * (i + 1) / placements.length));
+        }
+
+        const outBytes = await doc.save();
+        const outName = pdfFileName.replace(/\.pdf$/i, '') + '-overlay.pdf';
+        downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), outName);
+
+        setProgress(progress, 100);
+        setStatus(status, 'PDF downloaded with ' + placements.length + ' image' + (placements.length !== 1 ? 's' : '') + ' embedded!', 'success');
+      } catch (err) {
+        console.error(err);
+        setStatus(status, 'Error: ' + err.message, 'error');
+      }
+
+      setProgress(progress, 0);
+      downloadBtn.disabled = false;
+    });
+
+    /* Convert image to PNG via canvas (for WebP and other formats pdf-lib can't handle directly) */
+    function convertToPng(dataUrl) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.src = dataUrl;
+      });
+    }
+  </script>
+  <script data-goatcounter="https://parchpdf.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

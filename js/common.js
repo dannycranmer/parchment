@@ -17,6 +17,7 @@ function renderNav(active) {
     {href:'pdf-to-text.html', id:'pdf-to-text', label:'PDF to Text'},
     {href:'protect.html', id:'protect', label:'Protect'},
     {href:'rotate.html', id:'rotate', label:'Rotate'},
+    {href:'overlay.html', id:'overlay', label:'Image Overlay'},
   ];
   const VISIBLE = 8;
   const visibleTools = tools.slice(0, VISIBLE);
@@ -75,6 +76,7 @@ function renderNav(active) {
     ]},
     { title: '✏️ Edit', items: [
       {href:'sign.html', id:'sign', icon:'✍️', label:'Sign'},
+      {href:'overlay.html', id:'overlay', icon:'🖼️', label:'Image Overlay'},
       {href:'watermark.html', id:'watermark', icon:'💧', label:'Watermark'},
       {href:'page-numbers.html', id:'page-numbers', icon:'🔢', label:'Page Numbers'},
       {href:'flatten.html', id:'flatten', icon:'📋', label:'Flatten'},
