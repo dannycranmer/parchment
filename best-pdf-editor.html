@@ -671,10 +671,12 @@
       }
       links.forEach(function(a){
         a.classList.toggle('active',a.dataset.target===active);
-        if(a.dataset.target===active){
-          a.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
-        }
       });
+      var activeLink=document.querySelector('.jump-links-inner a.active');
+      if(activeLink){
+        var container=document.querySelector('.jump-links-inner');
+        container.scrollTo({left:activeLink.offsetLeft-container.clientWidth/2+activeLink.clientWidth/2,behavior:'smooth'});
+      }
     }
     var ticking=false;
     window.addEventListener('scroll',function(){
