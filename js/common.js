@@ -111,7 +111,7 @@ function renderNav(active) {
         </div>
       </div>`).join('')}
       <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" class="mobile-nav-bmc">☕ Support Parchment</a>
-      <div class="mobile-nav-privacy">🔒 Your files never leave your device</div>
+      <div class="mobile-nav-privacy">🔒 Your files never leave your browser. AI runs locally.</div>
     </div>`;
   document.body.insertBefore(mobileNav, overlay.nextSibling);
 
@@ -147,7 +147,7 @@ function renderFooter() {
   const f = document.createElement('footer');
   f.className = 'footer';
   f.innerHTML = `<div style="margin-bottom:.75rem"><a href="best-pdf-editor.html" style="color:#2dd4bf;font-size:1.05rem;font-weight:600;text-decoration:none">Looking for a full PDF editor? See our honest comparison of the best PDF editors in 2026 →</a></div>
-    🔒 Your files never leave your device &nbsp;·&nbsp;
+    🔒 Your files never leave your browser — AI runs locally &nbsp;·&nbsp;
     <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener">☕ Support Parchment</a> &nbsp;·&nbsp;
     Need developer tools? <a href="https://devbrew.org/" target="_blank" rel="noopener">Try DevBrew</a> &nbsp;·&nbsp;
     Edit images? <a href="https://dannycranmer.github.io/imagetoolkit/" target="_blank" rel="noopener">Try ImageToolkit</a> &nbsp;·&nbsp;
