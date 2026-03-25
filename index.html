@@ -47,14 +47,8 @@
     <h1>Free, <em>Private</em> PDF Tools</h1>
     <p>Merge, split, compress, and convert PDFs directly in your browser. No uploads, no accounts, no ads.</p>
     <div class="privacy-badge">🔒 Your files never leave your device</div>
+    <a href="#tools" style="display:inline-block;margin-top:1.25rem;padding:0.6rem 1.5rem;background:transparent;color:var(--text-muted,#7A6B5D);border:1.5px solid rgba(61,43,31,0.2);border-radius:8px;text-decoration:none;font-size:0.95rem;font-weight:500;transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(61,43,31,0.4)';this.style.color='var(--text,#3D2B1F)'" onmouseout="this.style.borderColor='rgba(61,43,31,0.2)';this.style.color='var(--text-muted,#7A6B5D)'">Browse Tools ↓</a>
   </div>
-
-  <div id="bmcBanner" style="max-width:900px;margin:0 auto 1.5rem;padding:0.75rem 1.25rem;background:rgba(212,165,116,0.10);border:1px solid rgba(212,165,116,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;font-size:0.95rem;color:var(--text-muted,#7A6B5D);">
-    <span style="flex:1 1 auto;text-align:center;">These tools are free forever. If they saved you time, consider buying us a coffee.</span>
-    <a href="https://buymeacoffee.com/dairylea" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.4rem;background:#FFDD00;color:#1a1a1a;font-weight:600;padding:0.45rem 1rem;border-radius:6px;text-decoration:none;font-size:0.9rem;white-space:nowrap;">☕ Buy Me a Coffee</a>
-    <button onclick="document.getElementById('bmcBanner').style.display='none';try{sessionStorage.setItem('bmc_dismissed','1')}catch(e){}" style="background:none;border:none;color:#7A6B5D;cursor:pointer;font-size:1.2rem;padding:0 0.25rem;line-height:1;" aria-label="Dismiss">&times;</button>
-  </div>
-  <script>try{if(sessionStorage.getItem('bmc_dismissed')==='1')document.getElementById('bmcBanner').style.display='none'}catch(e){}</script>
 
   <div id="filesProcessedBanner" style="max-width:900px;margin:0 auto 1rem;text-align:center;font-size:.9rem;color:var(--text-muted,#7A6B5D);line-height:1.6;">
     <span id="globalCounter"></span>
@@ -75,7 +69,7 @@
     } catch(e) {}
   </script>
 
-  <div class="tool-grid">
+  <div id="tools" class="tool-grid">
     <a href="merge.html" class="tool-card">
       <div class="icon">📑</div>
       <h3>Merge PDF</h3>
