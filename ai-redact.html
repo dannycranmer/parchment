@@ -74,7 +74,7 @@
       </div>
 
       <div class="info-note">
-        <strong>What gets detected:</strong> Email addresses · Phone numbers · Social Security Numbers (SSNs) · Credit card numbers · US dates of birth · IP addresses · URLs · Custom text. Detection uses pattern matching on extracted text, then applies visual redaction boxes to the rendered PDF.
+        <strong>What gets detected:</strong> Email addresses · Phone numbers · Social Security Numbers (SSNs) · Credit card numbers · Physical addresses · Dates of birth · IP addresses · URLs. Detection uses pattern matching on extracted text, then applies black redaction boxes to the rendered PDF.
       </div>
 
       <div class="action-bar">
@@ -107,13 +107,14 @@
     let detectedPII = {}; // { category: { label, toggle, matches: [str], enabled } }
 
     const PII_PATTERNS = [
-      { id: 'email',   label: '📧 Email Addresses',      pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g },
-      { id: 'phone',   label: '📞 Phone Numbers',         pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g },
+      { id: 'email',   label: '📧 Email Addresses',        pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g },
+      { id: 'phone',   label: '📞 Phone Numbers',           pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g },
       { id: 'ssn',     label: '🔒 Social Security Numbers', pattern: /\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b/g },
-      { id: 'cc',      label: '💳 Credit Card Numbers',   pattern: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12}|3(?:0[0-5]|[68][0-9])[0-9]{11})\b/g },
-      { id: 'ipv4',    label: '🌐 IP Addresses',          pattern: /\b(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}\b/g },
-      { id: 'date',    label: '📅 Dates',                  pattern: /\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12]\d|3[01])[\/\-](?:19|20)\d{2}\b/g },
-      { id: 'url',     label: '🔗 URLs',                   pattern: /https?:\/\/[^\s"'<>]+/g },
+      { id: 'cc',      label: '💳 Credit Card Numbers',     pattern: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12}|3(?:0[0-5]|[68][0-9])[0-9]{11})\b/g },
+      { id: 'address', label: '🏠 Physical Addresses',      pattern: /\b\d{1,5}\s+(?:[NSEW]\.?\s+)?(?:[A-Za-z]+\s+){1,4}(?:Street|St\.?|Avenue|Ave\.?|Road|Rd\.?|Boulevard|Blvd\.?|Lane|Ln\.?|Drive|Dr\.?|Court|Ct\.?|Way|Place|Pl\.?|Circle|Cir\.?|Terrace|Ter\.?|Trail|Trl\.?|Loop|Pkwy\.?|Parkway|Highway|Hwy\.?|Alley|Aly\.?)(?:\s+(?:Suite|Ste\.?|Apt\.?|Apartment|Unit|Unt\.?|Floor|Fl\.?|#)\s*[A-Za-z0-9]+)?\b/gi },
+      { id: 'ipv4',    label: '🌐 IP Addresses',            pattern: /\b(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}\b/g },
+      { id: 'date',    label: '📅 Dates of Birth',          pattern: /\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12]\d|3[01])[\/\-](?:19|20)\d{2}\b/g },
+      { id: 'url',     label: '🔗 URLs',                    pattern: /https?:\/\/[^\s"'<>]+/g },
     ];
 
     const dropZone = document.getElementById('dropZone');
@@ -252,13 +253,10 @@
       setStatus(status, 'Rendering pages for redaction…');
       setProgress(progress, 5);
 
-      // Gather all terms to redact
-      const termsToRedact = [];
-      for (const cat of Object.values(detectedPII)) {
-        if (cat.enabled) termsToRedact.push(...cat.matches);
-      }
+      // Get active pattern configs (re-run patterns per page for accurate position mapping)
+      const activePatternConfigs = PII_PATTERNS.filter(p => detectedPII[p.id] && detectedPII[p.id].enabled);
 
-      if (termsToRedact.length === 0) {
+      if (activePatternConfigs.length === 0) {
         setStatus(status, 'No categories selected for redaction', 'error');
         redactBtn.disabled = false; return;
       }
@@ -266,10 +264,10 @@
       try {
         const totalPages = pdfDoc.numPages;
         const SCALE = 2;
-        const { PDFDocument, rgb } = PDFLib;
+        const { PDFDocument } = PDFLib;
 
-        // Render each page to canvas with redaction boxes, then create image PDF
         const canvases = [];
+        let totalRedacted = 0;
         for (let i = 1; i <= totalPages; i++) {
           setStatus(status, `Rendering page ${i}/${totalPages}…`);
           setProgress(progress, 5 + Math.round((i / totalPages) * 60));
@@ -280,26 +278,56 @@
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           const ctx = canvas.getContext('2d');
-
           await page.render({ canvasContext: ctx, viewport }).promise;
 
-          // Get text items with positions
+          // Build page text string with per-item character ranges
+          // This lets us map regex matches back to exact text items for precise box placement
           const textContent = await page.getTextContent();
+          let pageText = '';
+          const itemRanges = []; // { start, end, item }
           for (const item of textContent.items) {
-            if (!item.str || !item.str.trim()) continue;
-            const itemStr = item.str;
-            const matched = termsToRedact.some(term => itemStr.includes(term) || term.includes(itemStr.trim()));
-            if (!matched) continue;
+            if (!item.str) continue;
+            const start = pageText.length;
+            pageText += item.str;
+            itemRanges.push({ start, end: pageText.length, item });
+            pageText += ' '; // space separator between items
+          }
 
-            // Calculate canvas position from PDF coordinates
+          // Run each active pattern on the full page text, collect matching items
+          const matchedItems = new Set();
+          for (const patConfig of activePatternConfigs) {
+            // Fresh regex with global+case-insensitive flags to avoid stale lastIndex
+            const re = new RegExp(patConfig.pattern.source, 'gi');
+            let m;
+            while ((m = re.exec(pageText)) !== null) {
+              const mStart = m.index;
+              const mEnd = m.index + m[0].length;
+              // Any item whose character range overlaps this match gets redacted
+              for (const range of itemRanges) {
+                if (range.start < mEnd && range.end > mStart) {
+                  matchedItems.add(range.item);
+                }
+              }
+            }
+          }
+
+          // Draw solid black redaction boxes over matched items
+          ctx.fillStyle = '#000000';
+          for (const item of matchedItems) {
             const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
             const x = tx[4];
-            const y = tx[5];
-            const w = Math.abs(item.width * SCALE);
-            const h = Math.max(Math.abs(tx[0] * 1.3), 12); // font height approximation
-
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(Math.max(0, x - 1), y - h, Math.max(w, 20) + 2, h + 4);
+            const y = tx[5]; // baseline in canvas coordinates
+            const w = item.width * SCALE;
+            // Font height from the y-scale component (tx[3] is negative due to y-flip)
+            const fontH = Math.max(Math.abs(tx[3]), Math.abs(tx[0]), 10);
+            // Box covers full EM height above baseline + ~30% below for descenders
+            ctx.fillRect(
+              Math.max(0, x - 2),
+              y - fontH,
+              Math.max(w + 4, 20),
+              fontH * 1.35
+            );
+            totalRedacted++;
           }
 
           canvases.push({ canvas, page });
@@ -323,7 +351,7 @@
         const redactedBytes = await outDoc.save();
         downloadBlob(new Blob([redactedBytes], {type:'application/pdf'}), baseName + '-redacted.pdf');
         setProgress(progress, 100);
-        setStatus(status, `Redacted ${termsToRedact.length} item${termsToRedact.length !== 1 ? 's' : ''} — download started`, 'success');
+        setStatus(status, `Redaction complete — ${totalRedacted} item${totalRedacted !== 1 ? 's' : ''} redacted — download started`, 'success');
       } catch(e) {
         setStatus(status, 'Redaction error: ' + e.message, 'error');
       }

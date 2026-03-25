@@ -289,15 +289,28 @@
 
           summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6', {
             progress_callback: (p) => {
-              if (p.status === 'downloading') {
-                const pct = p.total > 0 ? Math.round((p.loaded / p.total) * 100) : 0;
+              if (p.status === 'progress') {
+                const pct = Math.round(p.progress || 0);
                 modelProgressFill.style.width = pct + '%';
                 modelPct.textContent = pct + '%';
-                modelStatusText.textContent = 'Downloading AI model (' + Math.round((p.loaded || 0) / 1048576) + ' MB)…';
-              } else if (p.status === 'loading') {
-                modelStatusText.textContent = 'Initializing AI model…';
-                modelProgressFill.style.width = '95%';
-                modelPct.textContent = '95%';
+                const loadedMB = Math.round((p.loaded || 0) / 1048576);
+                const totalMB = Math.round((p.total || 0) / 1048576);
+                modelStatusText.textContent = totalMB > 0
+                  ? `Downloading AI model (${loadedMB} / ${totalMB} MB)…`
+                  : `Downloading AI model…`;
+              } else if (p.status === 'initiate') {
+                modelStatusText.textContent = 'Starting model download…';
+                modelProgressFill.style.width = '2%';
+                modelPct.textContent = '0%';
+              } else if (p.status === 'done') {
+                modelProgressFill.style.width = '92%';
+                modelPct.textContent = '92%';
+                modelStatusText.textContent = 'Initializing model…';
+              } else if (p.status === 'ready') {
+                modelProgressFill.style.width = '100%';
+                modelPct.textContent = '100%';
+                modelStatusText.textContent = 'AI model ready!';
+                modelSpinner.style.display = 'none';
               }
             }
           });
