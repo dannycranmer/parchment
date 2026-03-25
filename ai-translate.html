@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI PDF Translator — Free, Private, Runs in Browser — Parchment</title>
+  <meta name="description" content="Translate PDF text to Spanish, French, German, and more — AI runs entirely in your browser. No uploads, no servers, completely private. Free forever.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://parchpdf.com/ai-translate.html">
+  <meta property="og:title" content="AI PDF Translator — Free &amp; Private — Parchment">
+  <meta property="og:description" content="Translate PDF text with local AI. Spanish, French, German, and more — no uploads, no servers.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://parchpdf.com/ai-translate.html">
+  <meta property="og:image" content="https://parchpdf.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI PDF Translator — Free &amp; Private — Parchment">
+  <meta name="twitter:description" content="Translate PDF text with local AI. No uploads, no servers, completely private.">
+  <meta name="twitter:image" content="https://parchpdf.com/og-image.png">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AI PDF Translator - Parchment",
+    "description": "Translate PDF text to multiple languages using AI that runs 100% in your browser. No uploads, no servers.",
+    "url": "https://parchpdf.com/ai-translate.html",
+    "applicationCategory": "BrowserApplication",
+    "operatingSystem": "All",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <style>
+    .ai-badge{display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .9rem;border-radius:20px;margin-bottom:.75rem}
+    .model-status{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:1rem 1.25rem;margin-top:1rem;display:none}
+    .model-status.visible{display:block}
+    .model-status-row{display:flex;align-items:center;gap:.75rem;font-size:.88rem}
+    .model-spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .model-progress{flex:1;height:6px;background:var(--bg-alt);border-radius:3px;overflow:hidden}
+    .model-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#2A7B6F);border-radius:3px;transition:width .4s ease;width:0}
+    .translate-output{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none}
+    .translate-output.visible{display:block}
+    .output-label{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem}
+    .output-text{font-size:.93rem;line-height:1.8;color:var(--text);background:var(--bg);border-radius:var(--radius-sm);padding:.85rem 1rem;border:1px solid var(--border-light);white-space:pre-wrap;max-height:400px;overflow-y:auto;word-break:break-word}
+    .stats-row{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.85rem;color:var(--text-muted)}
+    .stats-row span{font-weight:700;color:#7c3aed}
+    .translate-actions{display:flex;gap:.5rem;margin-top:.85rem;flex-wrap:wrap}
+    .info-note{background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.83rem;color:var(--text-muted);margin-top:1rem;line-height:1.6}
+    .info-note strong{color:#7c3aed}
+    .lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.5rem}
+    .chunk-progress{font-size:.82rem;color:var(--text-muted);text-align:center;margin-top:.35rem}
+    .lang-flag{font-size:1.1rem;margin-right:.3rem}
+    .page-limit-note{font-size:.82rem;color:var(--text-muted);background:rgba(212,165,116,.08);border:1px solid rgba(212,165,116,.2);border-radius:var(--radius-sm);padding:.6rem .9rem;margin-top:.65rem}
+  </style>
+</head>
+<body>
+  <div style="display:none">Impact-Site-Verification: 0161bd52-e095-4b1c-aeb4-53b1caf7a9f6</div>
+  <div class="tool-header">
+    <div class="ai-badge">✨ AI-Powered</div>
+    <h1>AI PDF Translator</h1>
+    <p>Translate PDF text to Spanish, French, German, Italian, and more — AI runs entirely in your browser</p>
+    <div class="privacy-badge">🔒 AI runs in your browser — no uploads, 100% private</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">🌐</div>
+      <p>Drag &amp; drop a PDF here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="options" style="margin-top:1rem">
+        <h3>Translation Options</h3>
+        <div class="lang-grid">
+          <div class="option-row">
+            <label>Translate to</label>
+            <select id="targetLang">
+              <option value="es">🇪🇸 Spanish</option>
+              <option value="fr">🇫🇷 French</option>
+              <option value="de">🇩🇪 German</option>
+              <option value="it">🇮🇹 Italian</option>
+              <option value="pt">🇵🇹 Portuguese</option>
+              <option value="nl">🇳🇱 Dutch</option>
+              <option value="ru">🇷🇺 Russian</option>
+              <option value="zh">🇨🇳 Chinese (Simplified)</option>
+              <option value="ar">🇸🇦 Arabic</option>
+              <option value="uk">🇺🇦 Ukrainian</option>
+            </select>
+          </div>
+          <div class="option-row">
+            <label>Pages to translate</label>
+            <select id="pageRange">
+              <option value="all">All pages</option>
+              <option value="first5">First 5 pages</option>
+              <option value="first10">First 10 pages</option>
+              <option value="custom">Custom range…</option>
+            </select>
+          </div>
+        </div>
+        <div id="customRangeRow" style="display:none;margin-top:.5rem">
+          <label style="font-size:.85rem;display:block;margin-bottom:.3rem;color:var(--text-muted)">Page range (e.g. 1-5, 7, 10-15)</label>
+          <input type="text" id="customRange" placeholder="e.g. 1-5, 7" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:.9rem">
+        </div>
+      </div>
+
+      <div class="info-note">
+        <strong>How this works:</strong> The AI translation model (~80–120MB) downloads once and runs entirely in your browser. Your document never leaves your device. After the first download, translations work offline.
+      </div>
+      <div class="page-limit-note">
+        ⚡ Translation is compute-intensive. For long documents, start with "First 5 pages" to preview quality before translating everything.
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="translateBtn">🌐 Translate with AI</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="model-status" id="modelStatus">
+      <div class="model-status-row">
+        <div class="model-spinner" id="modelSpinner"></div>
+        <div style="flex:1">
+          <div id="modelStatusText" style="font-weight:600;font-size:.88rem;margin-bottom:.3rem">Loading AI model…</div>
+          <div class="model-progress"><div class="model-progress-fill" id="modelProgressFill"></div></div>
+        </div>
+        <div id="modelPct" style="font-size:.82rem;color:var(--text-muted);min-width:3rem;text-align:right">0%</div>
+      </div>
+      <div class="chunk-progress" id="chunkProgress"></div>
+    </div>
+
+    <div class="translate-output" id="translateOutput">
+      <div class="stats-row" id="statsRow"></div>
+      <div class="output-label" id="outputLabel">📝 Translation</div>
+      <div class="output-text" id="outputText"></div>
+      <div class="translate-actions">
+        <button class="btn btn-primary" id="copyBtn">Copy Translation</button>
+        <button class="btn btn-secondary" id="downloadBtn">Download as .txt</button>
+        <button class="btn btn-secondary" id="resetBtn2">Translate Another PDF</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('ai-translate'); renderFooter();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Language model map — Xenova Helsinki-NLP OPUS-MT models
+    const LANG_MODELS = {
+      es: 'Xenova/opus-mt-en-es',
+      fr: 'Xenova/opus-mt-en-fr',
+      de: 'Xenova/opus-mt-en-de',
+      it: 'Xenova/opus-mt-en-it',
+      pt: 'Xenova/opus-mt-en-pt',
+      nl: 'Xenova/opus-mt-en-nl',
+      ru: 'Xenova/opus-mt-en-ru',
+      zh: 'Xenova/opus-mt-en-zh',
+      ar: 'Xenova/opus-mt-en-ar',
+      uk: 'Xenova/opus-mt-en-uk',
+    };
+
+    const LANG_NAMES = {
+      es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+      pt: 'Portuguese', nl: 'Dutch', ru: 'Russian', zh: 'Chinese (Simplified)',
+      ar: 'Arabic', uk: 'Ukrainian',
+    };
+
+    let pdfDoc = null, baseName = 'document', translator = null, currentModelLang = null;
+
+    const dropZone = document.getElementById('dropZone');
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const translateBtn = document.getElementById('translateBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetBtn2 = document.getElementById('resetBtn2');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const modelStatus = document.getElementById('modelStatus');
+    const modelStatusText = document.getElementById('modelStatusText');
+    const modelProgressFill = document.getElementById('modelProgressFill');
+    const modelPct = document.getElementById('modelPct');
+    const modelSpinner = document.getElementById('modelSpinner');
+    const chunkProgress = document.getElementById('chunkProgress');
+    const translateOutput = document.getElementById('translateOutput');
+    const outputText = document.getElementById('outputText');
+    const statsRow = document.getElementById('statsRow');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const pageRangeSel = document.getElementById('pageRange');
+    const customRangeRow = document.getElementById('customRangeRow');
+    const customRangeInput = document.getElementById('customRange');
+    const outputLabel = document.getElementById('outputLabel');
+
+    pageRangeSel.addEventListener('change', () => {
+      customRangeRow.style.display = pageRangeSel.value === 'custom' ? '' : 'none';
+    });
+
+    function reset() {
+      if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+      pdfInfo.style.display = 'none';
+      translateOutput.classList.remove('visible');
+      modelStatus.classList.remove('visible');
+      dropZone.style.display = '';
+      setStatus(status, '');
+      setProgress(progress, 0);
+    }
+    resetBtn.addEventListener('click', reset);
+    resetBtn2.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        const data = new Uint8Array(await file.arrayBuffer());
+        baseName = file.name.replace(/\.pdf$/i, '');
+        if (pdfDoc) { pdfDoc.destroy(); }
+        pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+        const n = pdfDoc.numPages;
+        fileInfo.innerHTML = `<div class="file-info"><div class="file-name">${escapeHtml(file.name)}</div><div class="file-meta">${formatSize(file.size)} · ${n} page${n !== 1 ? 's' : ''}</div></div>`;
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+      } catch(e) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Parse page range string into array of 1-based page numbers
+    function parsePageRange(rangeStr, total) {
+      const pages = new Set();
+      const parts = rangeStr.split(',');
+      for (const part of parts) {
+        const trimmed = part.trim();
+        const rangeMatch = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (rangeMatch) {
+          const a = parseInt(rangeMatch[1], 10), b = parseInt(rangeMatch[2], 10);
+          for (let i = Math.min(a,b); i <= Math.min(Math.max(a,b), total); i++) pages.add(i);
+        } else {
+          const n = parseInt(trimmed, 10);
+          if (!isNaN(n) && n >= 1 && n <= total) pages.add(n);
+        }
+      }
+      return Array.from(pages).sort((a,b) => a-b);
+    }
+
+    // Split text into sentence-aware chunks for model token limits (~512 tokens ≈ 400 words)
+    function chunkText(text, maxWords) {
+      // Try to split on sentence boundaries
+      const sentences = text.match(/[^.!?。！？]+[.!?。！？]*/g) || [text];
+      const chunks = [];
+      let current = [];
+      let wordCount = 0;
+      for (const sent of sentences) {
+        const wc = sent.split(/\s+/).filter(Boolean).length;
+        if (wordCount + wc > maxWords && current.length > 0) {
+          chunks.push(current.join(' '));
+          current = [sent];
+          wordCount = wc;
+        } else {
+          current.push(sent);
+          wordCount += wc;
+        }
+      }
+      if (current.length > 0) chunks.push(current.join(' '));
+      return chunks.filter(c => c.trim().length > 0);
+    }
+
+    translateBtn.addEventListener('click', async () => {
+      if (!pdfDoc) return;
+      translateBtn.disabled = true;
+      translateOutput.classList.remove('visible');
+
+      const targetLang = document.getElementById('targetLang').value;
+      const targetName = LANG_NAMES[targetLang];
+      const modelId = LANG_MODELS[targetLang];
+      const total = pdfDoc.numPages;
+
+      // Determine which pages to translate
+      let pageNums;
+      const sel = pageRangeSel.value;
+      if (sel === 'all') {
+        pageNums = Array.from({length: total}, (_, i) => i + 1);
+      } else if (sel === 'first5') {
+        pageNums = Array.from({length: Math.min(5, total)}, (_, i) => i + 1);
+      } else if (sel === 'first10') {
+        pageNums = Array.from({length: Math.min(10, total)}, (_, i) => i + 1);
+      } else {
+        const raw = customRangeInput.value.trim();
+        if (!raw) {
+          setStatus(status, 'Please enter a page range', 'error');
+          translateBtn.disabled = false; return;
+        }
+        pageNums = parsePageRange(raw, total);
+        if (pageNums.length === 0) {
+          setStatus(status, 'No valid pages in range (max: ' + total + ')', 'error');
+          translateBtn.disabled = false; return;
+        }
+      }
+
+      // Step 1: Extract text from selected pages
+      setStatus(status, 'Extracting text from PDF…');
+      setProgress(progress, 5);
+      let fullText = '';
+      try {
+        for (let i = 0; i < pageNums.length; i++) {
+          const page = await pdfDoc.getPage(pageNums[i]);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(it => it.str).join(' ').trim();
+          if (pageText) fullText += (fullText ? '\n\n' : '') + pageText;
+          setProgress(progress, Math.round(5 + (i / pageNums.length) * 25));
+        }
+        fullText = fullText.trim();
+      } catch(e) {
+        setStatus(status, 'Error reading PDF: ' + e.message, 'error');
+        translateBtn.disabled = false; return;
+      }
+
+      const wordCount = fullText.split(/\s+/).filter(Boolean).length;
+      if (wordCount < 5) {
+        setStatus(status, 'Not enough text found in selected pages. This PDF may be scanned — try the AI OCR tool first.', 'error');
+        translateBtn.disabled = false; return;
+      }
+
+      // Step 2: Load AI translation model
+      setStatus(status, '');
+      setProgress(progress, 0);
+      modelStatus.classList.add('visible');
+      modelStatusText.textContent = 'Loading AI translation model for ' + targetName + '…';
+      modelProgressFill.style.width = '0%';
+      modelPct.textContent = '0%';
+      modelSpinner.style.display = '';
+
+      try {
+        // Load model if not already loaded for this language
+        if (!translator || currentModelLang !== targetLang) {
+          translator = null; // free old model
+          const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+          env.allowLocalModels = false;
+
+          translator = await pipeline('translation', modelId, {
+            progress_callback: (p) => {
+              if (p.status === 'downloading') {
+                const pct = p.total > 0 ? Math.round((p.loaded / p.total) * 100) : 0;
+                modelProgressFill.style.width = pct + '%';
+                modelPct.textContent = pct + '%';
+                modelStatusText.textContent = 'Downloading model (' + Math.round((p.loaded || 0) / 1048576) + ' MB)…';
+              } else if (p.status === 'loading') {
+                modelStatusText.textContent = 'Initializing translation model…';
+                modelProgressFill.style.width = '95%';
+                modelPct.textContent = '95%';
+              }
+            }
+          });
+          currentModelLang = targetLang;
+          modelStatusText.textContent = 'Model ready — translating…';
+          modelProgressFill.style.width = '100%';
+          modelPct.textContent = '100%';
+          modelSpinner.style.display = 'none';
+        } else {
+          modelStatusText.textContent = 'Model ready (cached) — translating…';
+          modelProgressFill.style.width = '100%';
+          modelPct.textContent = '100%';
+          modelSpinner.style.display = 'none';
+        }
+
+        // Step 3: Translate in chunks
+        const CHUNK_WORDS = 200; // conservative for translation quality
+        const chunks = chunkText(fullText, CHUNK_WORDS);
+        const translatedChunks = [];
+
+        for (let ci = 0; ci < chunks.length; ci++) {
+          chunkProgress.textContent = 'Translating chunk ' + (ci + 1) + ' of ' + chunks.length + '…';
+          const result = await translator(chunks[ci], {
+            tgt_lang: targetLang === 'zh' ? 'zh_CN' : undefined,
+          });
+          const translated = Array.isArray(result) ? result[0].translation_text : result.translation_text;
+          translatedChunks.push(translated);
+          // Update progress 30% → 100% during translation
+          setProgress(progress, Math.round(30 + (ci / chunks.length) * 70));
+        }
+
+        chunkProgress.textContent = '';
+        modelStatus.classList.remove('visible');
+
+        const translatedText = translatedChunks.join('\n\n');
+        const translatedWordCount = translatedText.split(/\s+/).filter(Boolean).length;
+
+        outputText.textContent = translatedText;
+        outputLabel.textContent = '📝 Translation (' + targetName + ')';
+        statsRow.innerHTML = `<div>Source: <span>${wordCount.toLocaleString()} words</span></div><div>Translated: <span>${translatedWordCount.toLocaleString()} words</span></div><div>Pages: <span>${pageNums.length} of ${total}</span></div><div>Language: <span>${targetName}</span></div>`;
+        translateOutput.classList.add('visible');
+        setProgress(progress, 100);
+        setStatus(status, 'Translation complete!', 'success');
+
+      } catch(e) {
+        modelStatus.classList.remove('visible');
+        console.error(e);
+        setStatus(status, 'Translation error: ' + e.message + '. The model may not support this language pair yet. Try another language.', 'error');
+      }
+
+      translateBtn.disabled = false;
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = outputText.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Translation'; }, 2000);
+      } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Translation'; }, 2000);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const lang = document.getElementById('targetLang').value;
+      const text = outputText.textContent;
+      const fname = baseName + '-translated-' + lang + '.txt';
+      downloadBlob(new Blob([text], {type:'text/plain'}), fname);
+    });
+
+    // Drop zone wiring
+    setupDropZone(dropZone, loadPDF);
+  </script>
+  <script data-goatcounter="https://parchment.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

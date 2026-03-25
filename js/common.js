@@ -2,6 +2,10 @@
 
 function renderNav(active) {
   const tools = [
+    {href:'ai-summarize.html', id:'ai-summarize', label:'✨ AI Summarize'},
+    {href:'ai-ocr.html', id:'ai-ocr', label:'✨ AI OCR'},
+    {href:'ai-redact.html', id:'ai-redact', label:'✨ AI Redact'},
+    {href:'ai-translate.html', id:'ai-translate', label:'✨ AI Translate'},
     {href:'merge.html', id:'merge', label:'Merge'},
     {href:'split.html', id:'split', label:'Split'},
     {href:'image-to-pdf.html', id:'image-to-pdf', label:'Image to PDF'},
@@ -18,10 +22,6 @@ function renderNav(active) {
     {href:'protect.html', id:'protect', label:'Protect'},
     {href:'rotate.html', id:'rotate', label:'Rotate'},
     {href:'overlay.html', id:'overlay', label:'Image Overlay'},
-    {href:'ai-summarize.html', id:'ai-summarize', label:'✨ AI Summarize'},
-    {href:'ai-ocr.html', id:'ai-ocr', label:'✨ AI OCR'},
-    {href:'ai-redact.html', id:'ai-redact', label:'✨ AI Redact'},
-    {href:'ai-translate.html', id:'ai-translate', label:'✨ AI Translate'},
   ];
   const VISIBLE = 8;
   const visibleTools = tools.slice(0, VISIBLE);
@@ -65,6 +65,12 @@ function renderNav(active) {
 
   /* Mobile nav — full-screen categorized takeover */
   const categories = [
+    { title: '🤖 AI Tools', items: [
+      {href:'ai-summarize.html', id:'ai-summarize', icon:'✨', label:'AI Summarize'},
+      {href:'ai-ocr.html', id:'ai-ocr', icon:'🔍', label:'AI OCR'},
+      {href:'ai-redact.html', id:'ai-redact', icon:'🛡️', label:'AI Redact'},
+      {href:'ai-translate.html', id:'ai-translate', icon:'🌐', label:'AI Translate'},
+    ]},
     { title: '📑 Organize', items: [
       {href:'merge.html', id:'merge', icon:'📑', label:'Merge'},
       {href:'split.html', id:'split', icon:'✂️', label:'Split'},
@@ -88,12 +94,6 @@ function renderNav(active) {
     { title: '🔐 Security', items: [
       {href:'protect.html', id:'protect', icon:'🔒', label:'Protect'},
       {href:'unlock.html', id:'unlock', icon:'🔓', label:'Unlock'},
-    ]},
-    { title: '🤖 AI Tools', items: [
-      {href:'ai-summarize.html', id:'ai-summarize', icon:'✨', label:'AI Summarize'},
-      {href:'ai-ocr.html', id:'ai-ocr', icon:'🔍', label:'AI OCR'},
-      {href:'ai-redact.html', id:'ai-redact', icon:'🛡️', label:'AI Redact'},
-      {href:'ai-translate.html', id:'ai-translate', icon:'🌐', label:'AI Translate'},
     ]},
   ];
 
