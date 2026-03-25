@@ -18,6 +18,10 @@ function renderNav(active) {
     {href:'protect.html', id:'protect', label:'Protect'},
     {href:'rotate.html', id:'rotate', label:'Rotate'},
     {href:'overlay.html', id:'overlay', label:'Image Overlay'},
+    {href:'ai-summarize.html', id:'ai-summarize', label:'✨ AI Summarize'},
+    {href:'ai-ocr.html', id:'ai-ocr', label:'✨ AI OCR'},
+    {href:'ai-redact.html', id:'ai-redact', label:'✨ AI Redact'},
+    {href:'ai-translate.html', id:'ai-translate', label:'✨ AI Translate'},
   ];
   const VISIBLE = 8;
   const visibleTools = tools.slice(0, VISIBLE);
@@ -84,6 +88,12 @@ function renderNav(active) {
     { title: '🔐 Security', items: [
       {href:'protect.html', id:'protect', icon:'🔒', label:'Protect'},
       {href:'unlock.html', id:'unlock', icon:'🔓', label:'Unlock'},
+    ]},
+    { title: '🤖 AI Tools', items: [
+      {href:'ai-summarize.html', id:'ai-summarize', icon:'✨', label:'AI Summarize'},
+      {href:'ai-ocr.html', id:'ai-ocr', icon:'🔍', label:'AI OCR'},
+      {href:'ai-redact.html', id:'ai-redact', icon:'🛡️', label:'AI Redact'},
+      {href:'ai-translate.html', id:'ai-translate', icon:'🌐', label:'AI Translate'},
     ]},
   ];
 
@@ -212,17 +222,6 @@ function trackFilesProcessed(n) {
 
 function getFilesProcessed() {
   return parseInt(localStorage.getItem('parchment_files_processed') || '0', 10);
-}
-
-/* Global community counter — seed + local usage for social proof */
-function getGlobalFilesProcessed() {
-  /* Seed: plausible base that grows with time since launch (2026-03-19) */
-  var launched = new Date('2026-03-19T00:00:00Z').getTime();
-  var now = Date.now();
-  var daysSinceLaunch = Math.max(0, Math.floor((now - launched) / 86400000));
-  var seed = 10847 + (daysSinceLaunch * 142); /* ~142 files/day organic growth */
-  var local = getFilesProcessed();
-  return seed + local;
 }
 
 /* Download helper */

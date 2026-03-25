@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI PDF Summarizer — Free, Private, Runs in Browser — Parchment</title>
+  <meta name="description" content="Summarize any PDF instantly with AI that runs entirely in your browser. No uploads, no servers. Extract key points and summaries from documents privately.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://parchpdf.com/ai-summarize.html">
+  <meta property="og:title" content="AI PDF Summarizer — Free &amp; Private — Parchment">
+  <meta property="og:description" content="Summarize any PDF with local AI. No uploads, no servers, completely private.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://parchpdf.com/ai-summarize.html">
+  <meta property="og:image" content="https://parchpdf.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI PDF Summarizer — Free &amp; Private — Parchment">
+  <meta name="twitter:description" content="Summarize any PDF with local AI. No uploads, no servers, completely private.">
+  <meta name="twitter:image" content="https://parchpdf.com/og-image.png">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AI PDF Summarizer - Parchment",
+    "description": "Summarize any PDF instantly with AI that runs entirely in your browser. No uploads, no servers.",
+    "url": "https://parchpdf.com/ai-summarize.html",
+    "applicationCategory": "BrowserApplication",
+    "operatingSystem": "All",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <style>
+    .ai-badge{display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .9rem;border-radius:20px;margin-bottom:.75rem}
+    .model-status{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:1rem 1.25rem;margin-top:1rem;display:none}
+    .model-status.visible{display:block}
+    .model-status-row{display:flex;align-items:center;gap:.75rem;font-size:.88rem}
+    .model-spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .model-progress{flex:1;height:6px;background:var(--bg-alt);border-radius:3px;overflow:hidden}
+    .model-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#2A7B6F);border-radius:3px;transition:width .4s ease;width:0}
+    .summary-output{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none}
+    .summary-output.visible{display:block}
+    .summary-section{margin-bottom:1.25rem}
+    .summary-section:last-child{margin-bottom:0}
+    .summary-label{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem}
+    .summary-text{font-size:.95rem;line-height:1.75;color:var(--text);background:var(--bg);border-radius:var(--radius-sm);padding:.85rem 1rem;border:1px solid var(--border-light)}
+    .key-points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.4rem}
+    .key-points li{font-size:.9rem;line-height:1.65;padding:.5rem .85rem;background:var(--bg);border-radius:var(--radius-sm);border-left:3px solid #7c3aed;border:1px solid var(--border-light);border-left:3px solid #7c3aed}
+    .stats-row{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.85rem;color:var(--text-muted)}
+    .stats-row span{font-weight:700;color:#7c3aed}
+    .summary-actions{display:flex;gap:.5rem;margin-top:.85rem;flex-wrap:wrap}
+    .info-note{background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.83rem;color:var(--text-muted);margin-top:1rem;line-height:1.6}
+    .info-note strong{color:#7c3aed}
+    .chunk-progress{font-size:.82rem;color:var(--text-muted);text-align:center;margin-top:.35rem}
+  </style>
+</head>
+<body>
+  <div style="display:none">Impact-Site-Verification: 0161bd52-e095-4b1c-aeb4-53b1caf7a9f6</div>
+  <div class="tool-header">
+    <div class="ai-badge">✨ AI-Powered</div>
+    <h1>AI PDF Summarizer</h1>
+    <p>Summarize any PDF with local AI — key points, highlights, concise overview</p>
+    <div class="privacy-badge">🔒 AI runs in your browser — no uploads, 100% private</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">📄</div>
+      <p>Drag &amp; drop a PDF here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="options" style="margin-top:1rem">
+        <h3>Summary Options</h3>
+        <div class="option-row">
+          <label>Summary length</label>
+          <select id="summaryLength">
+            <option value="short">Short (2–3 sentences)</option>
+            <option value="medium" selected>Medium (4–6 sentences)</option>
+            <option value="long">Detailed (8–10 sentences)</option>
+          </select>
+        </div>
+        <div class="option-row">
+          <label>Key points</label>
+          <select id="keyPointsCount">
+            <option value="3">3 key points</option>
+            <option value="5" selected>5 key points</option>
+            <option value="8">8 key points</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-note">
+        <strong>How this works:</strong> The AI model (~150MB) downloads once and runs entirely in your browser. After the first load, summaries are instant — no internet needed. Your document never leaves your device.
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="summarizeBtn">✨ Summarize with AI</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="model-status" id="modelStatus">
+      <div class="model-status-row">
+        <div class="model-spinner" id="modelSpinner"></div>
+        <div style="flex:1">
+          <div id="modelStatusText" style="font-weight:600;font-size:.88rem;margin-bottom:.3rem">Loading AI model…</div>
+          <div class="model-progress"><div class="model-progress-fill" id="modelProgressFill"></div></div>
+        </div>
+        <div id="modelPct" style="font-size:.82rem;color:var(--text-muted);min-width:3rem;text-align:right">0%</div>
+      </div>
+      <div class="chunk-progress" id="chunkProgress"></div>
+    </div>
+
+    <div class="summary-output" id="summaryOutput">
+      <div class="stats-row" id="statsRow"></div>
+      <div class="summary-section">
+        <div class="summary-label">📋 Summary</div>
+        <div class="summary-text" id="summaryText"></div>
+      </div>
+      <div class="summary-section" id="keyPointsSection">
+        <div class="summary-label">💡 Key Points</div>
+        <ul class="key-points" id="keyPointsList"></ul>
+      </div>
+      <div class="summary-actions">
+        <button class="btn btn-primary" id="copyBtn">Copy Summary</button>
+        <button class="btn btn-secondary" id="downloadBtn">Download as .txt</button>
+        <button class="btn btn-secondary" id="resetBtn2">Summarize Another PDF</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('ai-summarize'); renderFooter();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfDoc = null, baseName = 'document', summarizer = null;
+
+    const dropZone = document.getElementById('dropZone');
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const summarizeBtn = document.getElementById('summarizeBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetBtn2 = document.getElementById('resetBtn2');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const modelStatus = document.getElementById('modelStatus');
+    const modelStatusText = document.getElementById('modelStatusText');
+    const modelProgressFill = document.getElementById('modelProgressFill');
+    const modelPct = document.getElementById('modelPct');
+    const modelSpinner = document.getElementById('modelSpinner');
+    const chunkProgress = document.getElementById('chunkProgress');
+    const summaryOutput = document.getElementById('summaryOutput');
+    const summaryText = document.getElementById('summaryText');
+    const keyPointsList = document.getElementById('keyPointsList');
+    const statsRow = document.getElementById('statsRow');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    function reset() {
+      if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+      pdfInfo.style.display = 'none';
+      summaryOutput.classList.remove('visible');
+      modelStatus.classList.remove('visible');
+      dropZone.style.display = '';
+      setStatus(status, '');
+      setProgress(progress, 0);
+    }
+    resetBtn.addEventListener('click', reset);
+    resetBtn2.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        const data = new Uint8Array(await file.arrayBuffer());
+        baseName = file.name.replace(/\.pdf$/i, '');
+        if (pdfDoc) { pdfDoc.destroy(); }
+        pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+        const n = pdfDoc.numPages;
+        fileInfo.innerHTML = `<div class="file-info"><div class="file-name">${file.name}</div><div class="file-meta">${formatSize(file.size)} · ${n} page${n !== 1 ? 's' : ''}</div></div>`;
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+      } catch(e) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    /* Extractive key-point extraction using TF-IDF sentence scoring */
+    function extractKeyPoints(text, n) {
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+      if (sentences.length <= n) return sentences.map(s => s.trim()).filter(s => s.length > 20);
+
+      // Build word frequency map
+      const words = text.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+      const freq = {};
+      words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+
+      // Score sentences by sum of word frequencies (TF weighting)
+      const scored = sentences.map(s => {
+        const ws = s.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+        const score = ws.reduce((sum, w) => sum + (freq[w] || 0), 0) / Math.max(1, ws.length);
+        return { text: s.trim(), score };
+      });
+
+      // Return top-n by score, preserving order
+      const topIdx = scored
+        .map((s, i) => ({ score: s.score, i }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, n)
+        .map(x => x.i)
+        .sort((a, b) => a - b);
+
+      return topIdx.map(i => scored[i].text).filter(s => s.length > 20);
+    }
+
+    /* Chunk text to avoid model token limits (~512 tokens ≈ 350 words) */
+    function chunkText(text, wordsPerChunk) {
+      const words = text.split(/\s+/);
+      const chunks = [];
+      for (let i = 0; i < words.length; i += wordsPerChunk) {
+        chunks.push(words.slice(i, i + wordsPerChunk).join(' '));
+      }
+      return chunks;
+    }
+
+    summarizeBtn.addEventListener('click', async () => {
+      if (!pdfDoc) return;
+      summarizeBtn.disabled = true;
+      summaryOutput.classList.remove('visible');
+
+      // Step 1: Extract text
+      setStatus(status, 'Extracting text from PDF…');
+      setProgress(progress, 5);
+      let fullText = '';
+      try {
+        const total = pdfDoc.numPages;
+        for (let i = 1; i <= total; i++) {
+          const page = await pdfDoc.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items.map(it => it.str).join(' ') + '\n';
+          setProgress(progress, Math.round((i / total) * 30));
+        }
+        fullText = fullText.trim();
+      } catch(e) {
+        setStatus(status, 'Error reading PDF: ' + e.message, 'error');
+        summarizeBtn.disabled = false; return;
+      }
+
+      if (fullText.split(/\s+/).length < 30) {
+        setStatus(status, 'Not enough text found. This PDF may be scanned — try the AI OCR tool instead.', 'error');
+        summarizeBtn.disabled = false; return;
+      }
+
+      const wordCount = fullText.split(/\s+/).filter(w => w).length;
+      const lengthSel = document.getElementById('summaryLength').value;
+      const kpCount = parseInt(document.getElementById('keyPointsCount').value, 10);
+
+      // Step 2: Extract key points (always instant — no model needed)
+      setStatus(status, 'Extracting key points…');
+      setProgress(progress, 35);
+      const keyPoints = extractKeyPoints(fullText, kpCount);
+
+      // Step 3: Load AI model and generate abstractive summary
+      setStatus(status, '');
+      setProgress(progress, 0);
+      modelStatus.classList.add('visible');
+      modelStatusText.textContent = 'Loading AI summarization model…';
+      modelProgressFill.style.width = '0%';
+      modelPct.textContent = '0%';
+
+      try {
+        if (!summarizer) {
+          const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+          env.allowLocalModels = false;
+
+          summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6', {
+            progress_callback: (p) => {
+              if (p.status === 'downloading') {
+                const pct = p.total > 0 ? Math.round((p.loaded / p.total) * 100) : 0;
+                modelProgressFill.style.width = pct + '%';
+                modelPct.textContent = pct + '%';
+                modelStatusText.textContent = 'Downloading AI model (' + Math.round((p.loaded || 0) / 1048576) + ' MB)…';
+              } else if (p.status === 'loading') {
+                modelStatusText.textContent = 'Initializing AI model…';
+                modelProgressFill.style.width = '95%';
+                modelPct.textContent = '95%';
+              }
+            }
+          });
+          modelStatusText.textContent = 'AI model ready!';
+          modelProgressFill.style.width = '100%';
+          modelPct.textContent = '100%';
+          modelSpinner.style.display = 'none';
+        } else {
+          modelStatusText.textContent = 'AI model ready (cached)';
+          modelProgressFill.style.width = '100%';
+          modelPct.textContent = '100%';
+          modelSpinner.style.display = 'none';
+        }
+
+        // Generate summary — chunk if needed (model limit ~512 tokens ≈ 350 words)
+        const maxLen = { short: 60, medium: 100, long: 160 }[lengthSel];
+        const minLen = { short: 20, medium: 40, long: 80 }[lengthSel];
+        const CHUNK_WORDS = 300;
+
+        let finalSummary = '';
+        if (wordCount <= CHUNK_WORDS) {
+          modelStatusText.textContent = 'Generating summary…';
+          chunkProgress.textContent = '';
+          const result = await summarizer(fullText, { max_new_tokens: maxLen, min_new_tokens: minLen });
+          finalSummary = result[0].summary_text;
+        } else {
+          // Multi-chunk: summarize each chunk then summarize the summaries
+          const chunks = chunkText(fullText, CHUNK_WORDS);
+          const partials = [];
+          for (let ci = 0; ci < chunks.length; ci++) {
+            modelStatusText.textContent = 'Summarizing part ' + (ci + 1) + ' of ' + chunks.length + '…';
+            chunkProgress.textContent = '';
+            const r = await summarizer(chunks[ci], { max_new_tokens: 80, min_new_tokens: 20 });
+            partials.push(r[0].summary_text);
+          }
+          // Combine partial summaries
+          const combined = partials.join(' ');
+          if (combined.split(/\s+/).length > CHUNK_WORDS) {
+            // One more pass if still long
+            const r2 = await summarizer(combined, { max_new_tokens: maxLen, min_new_tokens: minLen });
+            finalSummary = r2[0].summary_text;
+          } else {
+            const r2 = await summarizer(combined, { max_new_tokens: maxLen, min_new_tokens: minLen });
+            finalSummary = r2[0].summary_text;
+          }
+        }
+
+        // Display results
+        modelStatus.classList.remove('visible');
+        summaryText.textContent = finalSummary;
+        keyPointsList.innerHTML = keyPoints.map(kp => `<li>${kp}</li>`).join('');
+        statsRow.innerHTML = `<div>Words: <span>${wordCount.toLocaleString()}</span></div><div>Pages: <span>${pdfDoc.numPages}</span></div><div>Summary: <span>${finalSummary.split(/\s+/).length} words</span></div>`;
+        summaryOutput.classList.add('visible');
+        setStatus(status, 'Summary generated successfully!', 'success');
+
+      } catch(e) {
+        modelStatus.classList.remove('visible');
+        setStatus(status, 'AI model error: ' + e.message + '. Try refreshing the page.', 'error');
+      }
+
+      summarizeBtn.disabled = false;
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = '=== SUMMARY ===\n' + summaryText.textContent + '\n\n=== KEY POINTS ===\n'
+        + Array.from(keyPointsList.querySelectorAll('li')).map((li, i) => (i+1) + '. ' + li.textContent).join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Summary'; }, 2000);
+      } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Summary'; }, 2000);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const kpText = Array.from(keyPointsList.querySelectorAll('li')).map((li, i) => (i+1) + '. ' + li.textContent).join('\n');
+      const text = baseName + ' — AI Summary\n' + '='.repeat(40) + '\n\nSUMMARY\n' + summaryText.textContent + '\n\nKEY POINTS\n' + kpText;
+      downloadBlob(new Blob([text], {type:'text/plain'}), baseName + '-summary.txt');
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://parchpdf.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

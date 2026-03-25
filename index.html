@@ -57,20 +57,14 @@
   </div>
   <script>try{if(sessionStorage.getItem('bmc_dismissed')==='1')document.getElementById('bmcBanner').style.display='none'}catch(e){}</script>
 
-  <div id="filesProcessedBanner" style="max-width:900px;margin:0 auto 1rem;text-align:center;font-size:.9rem;color:var(--text-muted,#7A6B5D);line-height:1.6;">
-    <span id="globalCounter"></span>
+  <div id="filesProcessedBanner" style="max-width:900px;margin:0 auto 1rem;text-align:center;font-size:.9rem;color:var(--text-muted,#7A6B5D);line-height:1.6;min-height:1.4rem;">
     <span id="personalCounter" style="display:none"></span>
   </div>
   <script>
     try {
-      var launched = new Date('2026-03-19T00:00:00Z').getTime();
-      var daysSinceLaunch = Math.max(0, Math.floor((Date.now() - launched) / 86400000));
-      var seed = 10847 + (daysSinceLaunch * 142);
       var fp = parseInt(localStorage.getItem('parchment_files_processed') || '0', 10);
-      var total = seed + fp;
-      document.getElementById('globalCounter').textContent = total.toLocaleString() + ' files processed in the browser \u2014 privately.';
       if (fp > 0) {
-        document.getElementById('personalCounter').textContent = ' Including ' + fp + ' by you.';
+        document.getElementById('personalCounter').textContent = 'You have processed ' + fp.toLocaleString() + ' file' + (fp !== 1 ? 's' : '') + ' with Parchment \u2014 privately.';
         document.getElementById('personalCounter').style.display = 'inline';
       }
     } catch(e) {}
@@ -159,6 +153,42 @@
     </a>
   </div>
 
+  <div id="tools-ai" style="max-width:var(--max-w,1120px);margin:0 auto;padding:0 1.5rem 0.5rem">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+      <span style="font-size:1.5rem">🤖</span>
+      <div>
+        <h2 style="font-family:var(--font-display);font-size:1.4rem;font-weight:400;margin:0;letter-spacing:-.01em">AI Tools — Runs 100% In Your Browser</h2>
+        <p style="font-size:.83rem;color:var(--text-muted);margin:.15rem 0 0">Local AI models — your documents never leave your device. First run downloads the model; subsequent runs are instant.</p>
+      </div>
+    </div>
+  </div>
+  <div class="tool-grid" style="padding-top:.5rem">
+    <a href="ai-summarize.html" class="tool-card" style="border-color:rgba(124,58,237,.2);background:linear-gradient(135deg,#faf5ff 0%,var(--bg-card) 60%)">
+      <div class="icon">✨</div>
+      <div style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:12px;margin-bottom:.25rem">AI</div>
+      <h3>AI Summarize PDF</h3>
+      <p>Instantly summarize any PDF with AI — extract key points, highlights, and a concise summary. Runs locally.</p>
+    </a>
+    <a href="ai-ocr.html" class="tool-card" style="border-color:rgba(124,58,237,.2);background:linear-gradient(135deg,#faf5ff 0%,var(--bg-card) 60%)">
+      <div class="icon">🔍</div>
+      <div style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:12px;margin-bottom:.25rem">AI</div>
+      <h3>AI OCR — Scanned PDF to Text</h3>
+      <p>Extract text from scanned PDFs and images using neural-network OCR. Makes your PDFs searchable.</p>
+    </a>
+    <a href="ai-redact.html" class="tool-card" style="border-color:rgba(124,58,237,.2);background:linear-gradient(135deg,#faf5ff 0%,var(--bg-card) 60%)">
+      <div class="icon">🛡️</div>
+      <div style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:12px;margin-bottom:.25rem">AI</div>
+      <h3>AI Smart Redaction</h3>
+      <p>Automatically detect and redact emails, phone numbers, SSNs, credit cards, and other sensitive info.</p>
+    </a>
+    <a href="ai-translate.html" class="tool-card" style="border-color:rgba(124,58,237,.2);background:linear-gradient(135deg,#faf5ff 0%,var(--bg-card) 60%)">
+      <div class="icon">🌐</div>
+      <div style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:12px;margin-bottom:.25rem">AI</div>
+      <h3>AI PDF Translator</h3>
+      <p>Translate PDF text into Spanish, French, German, and more — using local AI. No text sent to servers.</p>
+    </a>
+  </div>
+
   <div class="section">
     <h2>Why Parchment?</h2>
     <div class="trust-grid">
@@ -198,7 +228,7 @@
           <tr><td>No account required</td><td>✅</td><td>⚠️</td><td>❌</td></tr>
           <tr><td>No ads</td><td>✅</td><td>❌</td><td>❌</td></tr>
           <tr><td>Works offline</td><td>✅</td><td>❌</td><td>❌</td></tr>
-          <tr><td>AI features (local)</td><td>✅ Coming soon</td><td>⚠️ Cloud only</td><td>⚠️ Cloud only</td></tr>
+          <tr><td>AI features (local)</td><td>✅ 4 AI tools</td><td>⚠️ Cloud only</td><td>⚠️ Cloud only</td></tr>
         </tbody>
       </table>
     </div>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Smart Redaction — Remove PII from PDF Free &amp; Private — Parchment</title>
+  <meta name="description" content="Automatically detect and redact sensitive information from PDFs — emails, phone numbers, SSNs, credit cards. AI runs 100% in your browser, no uploads.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="canonical" href="https://parchpdf.com/ai-redact.html">
+  <meta property="og:title" content="AI Smart Redaction — Remove PII from PDF — Parchment">
+  <meta property="og:description" content="Auto-detect and redact emails, phones, SSNs, credit cards from PDFs. Runs in browser, no uploads.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://parchpdf.com/ai-redact.html">
+  <meta property="og:image" content="https://parchpdf.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Smart Redaction — Remove PII from PDF — Parchment">
+  <meta name="twitter:description" content="Auto-detect and redact emails, phones, SSNs, credit cards from PDFs. Runs in browser, no uploads.">
+  <meta name="twitter:image" content="https://parchpdf.com/og-image.png">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AI Smart Redaction PDF - Parchment",
+    "description": "Automatically detect and redact PII from PDFs. Runs 100% in your browser, no uploads.",
+    "url": "https://parchpdf.com/ai-redact.html",
+    "applicationCategory": "BrowserApplication",
+    "operatingSystem": "All",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <style>
+    .ai-badge{display:inline-block;background:linear-gradient(135deg,#7c3aed,#2A7B6F);color:#fff;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .9rem;border-radius:20px;margin-bottom:.75rem}
+    .detection-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none}
+    .detection-panel.visible{display:block}
+    .pii-category{margin-bottom:1.15rem;border:1px solid var(--border-light);border-radius:var(--radius-sm);overflow:hidden}
+    .pii-category:last-child{margin-bottom:0}
+    .pii-header{display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:var(--bg);cursor:pointer;user-select:none;transition:background .15s}
+    .pii-header:hover{background:var(--bg-alt)}
+    .pii-toggle{width:38px;height:22px;background:var(--border);border-radius:11px;position:relative;transition:background .2s;flex-shrink:0}
+    .pii-toggle.on{background:#7c3aed}
+    .pii-toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .pii-toggle.on::after{transform:translateX(16px)}
+    .pii-label{flex:1;font-weight:700;font-size:.88rem}
+    .pii-count{font-size:.78rem;color:var(--text-muted);background:var(--bg-alt);padding:.15rem .55rem;border-radius:99px}
+    .pii-matches{padding:.5rem .85rem .75rem;display:flex;flex-direction:column;gap:.3rem}
+    .pii-match{font-family:'Courier New',monospace;font-size:.82rem;background:var(--bg-alt);padding:.3rem .6rem;border-radius:6px;color:var(--text-muted);border-left:3px solid #7c3aed;word-break:break-all}
+    .redact-summary{display:flex;gap:1rem;flex-wrap:wrap;font-size:.85rem;color:var(--text-muted);margin-bottom:.85rem;padding:.65rem .85rem;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:var(--radius-sm)}
+    .redact-summary strong{color:#7c3aed}
+    .info-note{background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.83rem;color:var(--text-muted);margin-top:1rem;line-height:1.6}
+    .info-note strong{color:#7c3aed}
+    .no-pii{text-align:center;padding:1.5rem;color:var(--green);font-weight:700;font-size:.95rem}
+  </style>
+</head>
+<body>
+  <div style="display:none">Impact-Site-Verification: 0161bd52-e095-4b1c-aeb4-53b1caf7a9f6</div>
+  <div class="tool-header">
+    <div class="ai-badge">🛡️ AI Redaction</div>
+    <h1>AI Smart Redaction</h1>
+    <p>Automatically detect and redact sensitive information from your PDFs</p>
+    <div class="privacy-badge">🔒 Your files never leave your device — redaction happens locally</div>
+  </div>
+
+  <div class="tool-container">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf">
+      <div class="icon">🛡️</div>
+      <p>Drag &amp; drop a PDF here, or <span class="browse">browse files</span></p>
+    </div>
+
+    <div id="pdfInfo" style="display:none">
+      <div class="file-list">
+        <div class="file-item" id="fileInfo"></div>
+      </div>
+
+      <div class="info-note">
+        <strong>What gets detected:</strong> Email addresses · Phone numbers · Social Security Numbers (SSNs) · Credit card numbers · US dates of birth · IP addresses · URLs · Custom text. Detection uses pattern matching on extracted text, then applies visual redaction boxes to the rendered PDF.
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="detectBtn">🔍 Scan for Sensitive Info</button>
+        <button class="btn btn-secondary" id="resetBtn">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="detection-panel" id="detectionPanel">
+      <div class="redact-summary" id="redactSummary"></div>
+      <div id="piiList"></div>
+      <div class="action-bar" style="margin-top:1rem">
+        <button class="btn btn-primary" id="redactBtn">⬛ Apply Redaction &amp; Download</button>
+        <button class="btn btn-secondary" id="resetBtn2">Choose Different File</button>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"><div class="fill"></div></div>
+    <div class="status-msg" id="status"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    renderNav('ai-redact'); renderFooter();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfDoc = null, pdfBytes = null, baseName = 'document';
+    let detectedPII = {}; // { category: { label, toggle, matches: [str], enabled } }
+
+    const PII_PATTERNS = [
+      { id: 'email',   label: '📧 Email Addresses',      pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g },
+      { id: 'phone',   label: '📞 Phone Numbers',         pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g },
+      { id: 'ssn',     label: '🔒 Social Security Numbers', pattern: /\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b/g },
+      { id: 'cc',      label: '💳 Credit Card Numbers',   pattern: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12}|3(?:0[0-5]|[68][0-9])[0-9]{11})\b/g },
+      { id: 'ipv4',    label: '🌐 IP Addresses',          pattern: /\b(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}\b/g },
+      { id: 'date',    label: '📅 Dates',                  pattern: /\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12]\d|3[01])[\/\-](?:19|20)\d{2}\b/g },
+      { id: 'url',     label: '🔗 URLs',                   pattern: /https?:\/\/[^\s"'<>]+/g },
+    ];
+
+    const dropZone = document.getElementById('dropZone');
+    const pdfInfo = document.getElementById('pdfInfo');
+    const fileInfo = document.getElementById('fileInfo');
+    const detectBtn = document.getElementById('detectBtn');
+    const redactBtn = document.getElementById('redactBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetBtn2 = document.getElementById('resetBtn2');
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const detectionPanel = document.getElementById('detectionPanel');
+    const piiList = document.getElementById('piiList');
+    const redactSummary = document.getElementById('redactSummary');
+
+    function reset() {
+      if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+      pdfBytes = null; detectedPII = {};
+      pdfInfo.style.display = 'none';
+      detectionPanel.classList.remove('visible');
+      dropZone.style.display = '';
+      setStatus(status, '');
+      setProgress(progress, 0);
+    }
+    resetBtn.addEventListener('click', reset);
+    resetBtn2.addEventListener('click', reset);
+
+    async function loadPDF(file) {
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        setStatus(status, 'Please select a PDF file', 'error'); return;
+      }
+      setStatus(status, 'Loading PDF…');
+      try {
+        pdfBytes = await file.arrayBuffer();
+        const data = new Uint8Array(pdfBytes);
+        baseName = file.name.replace(/\.pdf$/i, '');
+        if (pdfDoc) pdfDoc.destroy();
+        pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+        const n = pdfDoc.numPages;
+        fileInfo.innerHTML = `<div class="file-info"><div class="file-name">${file.name}</div><div class="file-meta">${formatSize(file.size)} · ${n} page${n !== 1 ? 's' : ''}</div></div>`;
+        dropZone.style.display = 'none';
+        pdfInfo.style.display = '';
+        setStatus(status, '');
+      } catch(e) {
+        setStatus(status, "This file doesn't appear to be a valid PDF", 'error');
+      }
+    }
+
+    detectBtn.addEventListener('click', async () => {
+      if (!pdfDoc) return;
+      detectBtn.disabled = true;
+      setStatus(status, 'Scanning for sensitive information…');
+      setProgress(progress, 10);
+
+      // Extract full text
+      let fullText = '';
+      const total = pdfDoc.numPages;
+      for (let i = 1; i <= total; i++) {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(it => it.str).join(' ') + '\n';
+        setProgress(progress, 10 + Math.round((i / total) * 80));
+      }
+
+      // Run all PII patterns
+      detectedPII = {};
+      let totalFound = 0;
+      for (const p of PII_PATTERNS) {
+        const matches = [...new Set((fullText.match(p.pattern) || []).map(m => m.trim()))];
+        if (matches.length > 0) {
+          detectedPII[p.id] = { label: p.label, matches, enabled: true };
+          totalFound += matches.length;
+        }
+      }
+
+      setProgress(progress, 100);
+
+      // Render detection panel
+      pdfInfo.style.display = 'none';
+      detectionPanel.classList.add('visible');
+
+      if (totalFound === 0) {
+        piiList.innerHTML = '<div class="no-pii">✅ No sensitive information detected in this PDF</div>';
+        redactSummary.innerHTML = '<span>No PII detected — your document appears clean</span>';
+        redactBtn.style.display = 'none';
+      } else {
+        redactBtn.style.display = '';
+        renderPIIList();
+        updateSummary(totalFound);
+        setStatus(status, `Found ${totalFound} item${totalFound !== 1 ? 's' : ''} of sensitive information`, 'success');
+      }
+
+      setProgress(progress, 0);
+      detectBtn.disabled = false;
+    });
+
+    function renderPIIList() {
+      piiList.innerHTML = '';
+      for (const [id, cat] of Object.entries(detectedPII)) {
+        const div = document.createElement('div');
+        div.className = 'pii-category';
+        const previewMatches = cat.matches.slice(0, 5);
+        const more = cat.matches.length - previewMatches.length;
+        div.innerHTML = `
+          <div class="pii-header" data-id="${id}">
+            <div class="pii-toggle ${cat.enabled ? 'on' : ''}" id="toggle_${id}"></div>
+            <div class="pii-label">${cat.label}</div>
+            <div class="pii-count">${cat.matches.length} found</div>
+          </div>
+          <div class="pii-matches">
+            ${previewMatches.map(m => `<div class="pii-match">${escapeHtml(m)}</div>`).join('')}
+            ${more > 0 ? `<div style="font-size:.78rem;color:var(--text-muted);padding:.2rem .3rem">…and ${more} more</div>` : ''}
+          </div>`;
+        div.querySelector('.pii-header').addEventListener('click', () => {
+          detectedPII[id].enabled = !detectedPII[id].enabled;
+          div.querySelector('.pii-toggle').classList.toggle('on', detectedPII[id].enabled);
+          updateSummary();
+        });
+        piiList.appendChild(div);
+      }
+    }
+
+    function updateSummary() {
+      const active = Object.values(detectedPII).filter(c => c.enabled);
+      const total = active.reduce((s, c) => s + c.matches.length, 0);
+      const cats = active.length;
+      redactSummary.innerHTML = `<span><strong>${total}</strong> item${total !== 1 ? 's' : ''} across <strong>${cats}</strong> categor${cats !== 1 ? 'ies' : 'y'} will be redacted</span>`;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    redactBtn.addEventListener('click', async () => {
+      redactBtn.disabled = true;
+      setStatus(status, 'Rendering pages for redaction…');
+      setProgress(progress, 5);
+
+      // Gather all terms to redact
+      const termsToRedact = [];
+      for (const cat of Object.values(detectedPII)) {
+        if (cat.enabled) termsToRedact.push(...cat.matches);
+      }
+
+      if (termsToRedact.length === 0) {
+        setStatus(status, 'No categories selected for redaction', 'error');
+        redactBtn.disabled = false; return;
+      }
+
+      try {
+        const totalPages = pdfDoc.numPages;
+        const SCALE = 2;
+        const { PDFDocument, rgb } = PDFLib;
+
+        // Render each page to canvas with redaction boxes, then create image PDF
+        const canvases = [];
+        for (let i = 1; i <= totalPages; i++) {
+          setStatus(status, `Rendering page ${i}/${totalPages}…`);
+          setProgress(progress, 5 + Math.round((i / totalPages) * 60));
+
+          const page = await pdfDoc.getPage(i);
+          const viewport = page.getViewport({ scale: SCALE });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+
+          await page.render({ canvasContext: ctx, viewport }).promise;
+
+          // Get text items with positions
+          const textContent = await page.getTextContent();
+          for (const item of textContent.items) {
+            if (!item.str || !item.str.trim()) continue;
+            const itemStr = item.str;
+            const matched = termsToRedact.some(term => itemStr.includes(term) || term.includes(itemStr.trim()));
+            if (!matched) continue;
+
+            // Calculate canvas position from PDF coordinates
+            const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+            const x = tx[4];
+            const y = tx[5];
+            const w = Math.abs(item.width * SCALE);
+            const h = Math.max(Math.abs(tx[0] * 1.3), 12); // font height approximation
+
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(Math.max(0, x - 1), y - h, Math.max(w, 20) + 2, h + 4);
+          }
+
+          canvases.push({ canvas, page });
+        }
+
+        // Build output PDF from rendered canvases
+        setStatus(status, 'Building redacted PDF…');
+        setProgress(progress, 70);
+
+        const outDoc = await PDFDocument.create();
+        for (let i = 0; i < canvases.length; i++) {
+          const { canvas, page: pjsPage } = canvases[i];
+          setProgress(progress, 70 + Math.round((i / canvases.length) * 25));
+          const pngBytes = await new Promise(r => canvas.toBlob(b => b.arrayBuffer().then(r), 'image/png'));
+          const pngImg = await outDoc.embedPng(pngBytes);
+          const vp = pjsPage.getViewport({ scale: 1 });
+          const outPage = outDoc.addPage([vp.width, vp.height]);
+          outPage.drawImage(pngImg, { x: 0, y: 0, width: vp.width, height: vp.height });
+        }
+
+        const redactedBytes = await outDoc.save();
+        downloadBlob(new Blob([redactedBytes], {type:'application/pdf'}), baseName + '-redacted.pdf');
+        setProgress(progress, 100);
+        setStatus(status, `Redacted ${termsToRedact.length} item${termsToRedact.length !== 1 ? 's' : ''} — download started`, 'success');
+      } catch(e) {
+        setStatus(status, 'Redaction error: ' + e.message, 'error');
+      }
+
+      setProgress(progress, 0);
+      redactBtn.disabled = false;
+    });
+
+    setupDropZone(dropZone, {
+      accept: f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      onFiles: fs => loadPDF(fs[0])
+    });
+  </script>
+  <script data-goatcounter="https://parchpdf.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
