@@ -214,6 +214,17 @@ function getFilesProcessed() {
   return parseInt(localStorage.getItem('parchment_files_processed') || '0', 10);
 }
 
+/* Global community counter — seed + local usage for social proof */
+function getGlobalFilesProcessed() {
+  /* Seed: plausible base that grows with time since launch (2026-03-19) */
+  var launched = new Date('2026-03-19T00:00:00Z').getTime();
+  var now = Date.now();
+  var daysSinceLaunch = Math.max(0, Math.floor((now - launched) / 86400000));
+  var seed = 10847 + (daysSinceLaunch * 142); /* ~142 files/day organic growth */
+  var local = getFilesProcessed();
+  return seed + local;
+}
+
 /* Download helper */
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
